@@ -1112,16 +1112,6 @@ db.from('produtos').select('*').then(({ data, error }) => {
        iniciarSessao(email, nome, perfil);
     ── */
 
-    const found = DEMO_USERS[email];
-    if (!found || found.senha !== senha) {
-      err.textContent = 'E-mail ou senha incorretos.';
-      err.classList.remove('hidden');
-      return;
-    }
-    err.classList.add('hidden');
-    iniciarSessao(email, found.nome, found.perfil);
-  }
-
   function demoLogin(email, senha, perfil) {
     document.getElementById('login-email').value = email;
     document.getElementById('login-pass').value  = senha;
@@ -1231,7 +1221,7 @@ async function carregarMovimentacoes() {
   await carregarMovimentacoes();
   renderUsuarios();
 }
-  }
+  
 
   /* ── Produtos ─────────────────────────────────────────── */
   function renderProdutos() {
