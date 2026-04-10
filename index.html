@@ -1082,10 +1082,28 @@ db.from('produtos').select('*').then(({ data, error }) => {
   });
 
   /* ── Login ────────────────────────────────────────────── */
-  function handleLogin() {
-    const email = document.getElementById('login-email').value.trim().toLowerCase();
-    const senha = document.getElementById('login-pass').value;
-    const err   = document.getElementById('login-error');
+  async function handleLogin() {
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const senha = document.getElementById('login-pass').value;
+  const err   = document.getElementById('login-error');
+
+  const { data, error } = await db.auth.signInWithPassword({ email, password: senha });
+
+  if (error) {
+    err.textContent = 'E-mail ou senha incorretos.';
+    err.classList.remove('hidden');
+    return;
+  }
+
+  const { data: perfil } = await db
+    .from('perfis')
+    .select('*')
+    .eq('id', data.user.id)
+    .single();
+
+  err.classList.add('hidden');
+  iniciarSessao(email, perfil.nome, perfil.perfil);
+}
 
     /* ── Supabase Auth (futuro):
        const { data, error } = await db.auth.signInWithPassword({ email, password: senha });
@@ -1165,10 +1183,54 @@ db.from('produtos').select('*').then(({ data, error }) => {
   }
 
   /* ── Renderização ─────────────────────────────────────── */
-  function renderAll() {
-    renderProdutos();
-    renderMovimentacoes();
-    renderUsuarios();
+
+  /* Carregar produtos do banco */
+  async function carregarProdutos() {
+  const { data, error } = await db.from('produtos').select('*');
+  if (error) { toast('Erro ao carregar produtos.', 'error'); return; }
+  App.produtos = data.map(p => ({
+    id:            p.id,
+    nome:          p.nome,
+    categoria:     p.categoria,
+    unidade:       p.unidade,
+    qtd:           p.qtd_atual,
+    qtdMin:        p.qtd_minima,
+    local:         p.local,
+    obs:           p.obs,
+    criadoPor:     p.criado_por,
+    ultimaEntrada: p.ultima_entrada ? fmt(p.ultima_entrada) : '—',
+    ultimaSaida:   p.ultima_saida   ? fmt(p.ultima_saida)   : '—',
+  }));
+  renderProdutos();
+}
+
+/* Carregar movimentações */
+
+async function carregarMovimentacoes() {
+  const { data, error } = await db.from('movimentacoes').select('*').order('criado_em', { ascending: false });
+  if (error) { toast('Erro ao carregar movimentações.', 'error'); return; }
+  App.movimentacoes = data.map(m => ({
+    id:            m.id,
+    produtoId:     m.produto_id,
+    produto:       m.produto_nome,
+    tipo:          m.tipo,
+    qtd:           m.qtd,
+    unidade:       m.unidade,
+    destino:       m.destino_origem,
+    nf:            m.nf,
+    registradoPor: m.registrado_por,
+    data:          fmt(m.data_mov),
+    obs:           m.obs,
+  }));
+  renderMovimentacoes();
+}
+
+/* Substituição de função */
+ async function renderAll() {
+  await carregarProdutos();
+  await carregarMovimentacoes();
+  renderUsuarios();
+}
   }
 
   /* ── Produtos ─────────────────────────────────────────── */
