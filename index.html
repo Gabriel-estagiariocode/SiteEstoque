@@ -7,10 +7,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
-  <!-- ============================================================
-       SUPABASE SDK  — descomente quando tiver as credenciais
+  
+       
        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  ============================================================ -->
+  
 
   <style>
     /* ─── Reset & Base ───────────────────────────────────── */
@@ -941,6 +941,17 @@
      JAVASCRIPT
 ══════════════════════════════════════════════════════ -->
 <script>
+
+  const { createClient } = supabase;
+const db = createClient(
+  'https://vqrogebjodwaioyjcrws.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxcm9nZWJqb2R3YWlveWpjcndzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NDMxNjMsImV4cCI6MjA5MTQxOTE2M30.m9VnXhQebf-U0Ivn3nkO-wSM9dweYMjLNs8tYvXB0fI'
+);
+
+db.from('produtos').select('*').then(({ data, error }) => {
+  console.log('Produtos:', data);
+  console.log('Erro:', error);
+});
 /* ─────────────────────────────────────────────────────────
    SUPABASE — configuração futura
    ─────────────────────────────────────────────────────────
