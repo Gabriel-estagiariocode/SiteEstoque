@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Estoque Escolar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- ============================================================
+       SUPABASE SDK  — descomente quando tiver as credenciais
+       <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  ============================================================ -->
+
+  <style>
+    /* ─── Reset & Base ───────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --font: 'DM Sans', sans-serif;
+      --font-mono: 'DM Mono', monospace;
+
+      /* Paleta principal */
+      --bg:          #F5F4F0;
+      --surface:     #FFFFFF;
+      --surface-2:   #F0EFEB;
+      --border:      #E2E0D8;
+      --border-dark: #C8C6BC;
+
+      /* Texto */
+      --text:        #1A1916;
+      --text-muted:  #6E6C64;
+      --text-faint:  #A09E96;
+
+      /* Cores semânticas */
+      --green:       #2D6A4F;
+      --green-bg:    #D8F3DC;
+      --amber:       #92400E;
+      --amber-bg:    #FEF3C7;
+      --red:         #9B1C1C;
+      --red-bg:      #FEE2E2;
+      --blue:        #1E40AF;
+      --blue-bg:     #DBEAFE;
+      --purple:      #4C1D95;
+      --purple-bg:   #EDE9FE;
+
+      /* Accent */
+      --accent:      #2D6A4F;
+      --accent-text: #FFFFFF;
+
+      /* Layout */
+      --sidebar-w:   220px;
+      --radius:      8px;
+      --radius-lg:   12px;
+      --shadow:      0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.04);
+      --shadow-md:   0 4px 12px rgba(0,0,0,.08);
+    }
+
+    html, body {
+      height: 100%;
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── Scrollbar ──────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-dark); border-radius: 3px; }
+
+    /* ─── Tipografia ─────────────────────────────────────── */
+    h1 { font-size: 20px; font-weight: 600; }
+    h2 { font-size: 16px; font-weight: 600; }
+    h3 { font-size: 14px; font-weight: 600; }
+    p  { font-size: 14px; }
+
+    /* ─── Utilitários ────────────────────────────────────── */
+    .hidden   { display: none !important; }
+    .flex     { display: flex; }
+    .flex-col { flex-direction: column; }
+    .items-center { align-items: center; }
+    .justify-between { justify-content: space-between; }
+    .gap-8  { gap: 8px; }
+    .gap-12 { gap: 12px; }
+    .gap-16 { gap: 16px; }
+    .mt-4  { margin-top: 4px; }
+    .mt-8  { margin-top: 8px; }
+    .mt-12 { margin-top: 12px; }
+    .mt-16 { margin-top: 16px; }
+    .mb-16 { margin-bottom: 16px; }
+    .w-full { width: 100%; }
+    .text-muted  { color: var(--text-muted); }
+    .text-faint  { color: var(--text-faint); }
+    .text-sm     { font-size: 12px; }
+    .text-mono   { font-family: var(--font-mono); }
+    .font-medium { font-weight: 500; }
+    .font-semi   { font-weight: 600; }
+
+    /* ─── Badge ──────────────────────────────────────────── */
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 2px 8px; border-radius: 20px;
+      font-size: 11px; font-weight: 500; white-space: nowrap;
+    }
+    .badge-green  { background: var(--green-bg);  color: var(--green); }
+    .badge-amber  { background: var(--amber-bg);  color: var(--amber); }
+    .badge-red    { background: var(--red-bg);    color: var(--red); }
+    .badge-blue   { background: var(--blue-bg);   color: var(--blue); }
+    .badge-purple { background: var(--purple-bg); color: var(--purple); }
+    .badge-gray   { background: var(--surface-2); color: var(--text-muted); }
+
+    /* ─── Botões ─────────────────────────────────────────── */
+    button { font-family: var(--font); cursor: pointer; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px; font-size: 13px; font-weight: 500;
+      border: 1px solid var(--border-dark); border-radius: var(--radius);
+      background: var(--surface); color: var(--text);
+      transition: background .15s, border-color .15s;
+    }
+    .btn:hover { background: var(--surface-2); }
+    .btn:active { transform: scale(.98); }
+
+    .btn-primary {
+      background: var(--accent); color: var(--accent-text);
+      border-color: var(--accent);
+    }
+    .btn-primary:hover { background: #255c43; border-color: #255c43; }
+
+    .btn-danger {
+      background: var(--red-bg); color: var(--red);
+      border-color: #FCA5A5;
+    }
+    .btn-danger:hover { background: #FEE2E2; }
+
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+    .btn-icon { padding: 6px; }
+
+    /* ─── Form ───────────────────────────────────────────── */
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-label { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="date"],
+    select,
+    textarea {
+      font-family: var(--font);
+      font-size: 13px;
+      padding: 8px 10px;
+      border: 1px solid var(--border-dark);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      width: 100%;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(45,106,79,.12);
+    }
+    input::placeholder { color: var(--text-faint); }
+    textarea { resize: vertical; min-height: 80px; }
+
+    /* ─── Card ───────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+    }
+    .card-body { padding: 16px 20px; }
+
+    /* ─── Metric card ────────────────────────────────────── */
+    .metric-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px 18px;
+    }
+    .metric-label { font-size: 11px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
+    .metric-value { font-size: 26px; font-weight: 600; line-height: 1.2; margin-top: 4px; }
+    .metric-sub   { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+
+    /* ─── Tabela ─────────────────────────────────────────── */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead th {
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 11px; font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: .04em;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    tbody td {
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+      vertical-align: middle;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: var(--bg); }
+
+    /* ─── Avatar ─────────────────────────────────────────── */
+    .avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 600;
+      flex-shrink: 0;
+      background: var(--purple-bg); color: var(--purple);
+    }
+    .avatar-sm { width: 26px; height: 26px; font-size: 10px; }
+
+    /* ─── Modal ──────────────────────────────────────────── */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.35);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100;
+      padding: 20px;
+    }
+    .modal {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      width: 100%; max-width: 500px;
+      max-height: 90vh; overflow-y: auto;
+    }
+    .modal-header {
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .modal-body   { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+    .modal-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+
+    /* ─── Toast ──────────────────────────────────────────── */
+    #toast-container {
+      position: fixed; bottom: 24px; right: 24px;
+      display: flex; flex-direction: column; gap: 8px;
+      z-index: 200;
+    }
+    .toast {
+      background: var(--text); color: var(--surface);
+      padding: 10px 16px; border-radius: var(--radius);
+      font-size: 13px; font-weight: 500;
+      box-shadow: var(--shadow-md);
+      animation: slideIn .2s ease;
+    }
+    .toast.toast-error { background: var(--red); }
+    .toast.toast-success { background: var(--green); }
+    @keyframes slideIn {
+      from { transform: translateX(20px); opacity: 0; }
+      to   { transform: translateX(0);    opacity: 1; }
+    }
+
+    /* ─── Tela de Login ──────────────────────────────────── */
+    #screen-login {
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .login-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      width: 100%; max-width: 360px;
+      padding: 32px 28px;
+    }
+    .login-logo {
+      width: 48px; height: 48px; border-radius: var(--radius-lg);
+      background: var(--green-bg);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; margin: 0 auto 20px;
+    }
+    .login-divider {
+      border: none; border-top: 1px solid var(--border); margin: 16px 0;
+    }
+
+    /* ─── Layout principal ───────────────────────────────── */
+    #screen-app {
+      display: flex; min-height: 100vh;
+    }
+
+    /* ─── Sidebar ────────────────────────────────────────── */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      flex-shrink: 0;
+      position: sticky; top: 0; height: 100vh;
+    }
+    .sidebar-top {
+      padding: 16px 14px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-brand {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 600; font-size: 14px;
+    }
+    .sidebar-brand-icon {
+      width: 30px; height: 30px; border-radius: 7px;
+      background: var(--green-bg); color: var(--green);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+    }
+    .sidebar-nav { padding: 10px 10px; flex: 1; overflow-y: auto; }
+    .sidebar-section-label {
+      font-size: 10px; font-weight: 600; color: var(--text-faint);
+      text-transform: uppercase; letter-spacing: .06em;
+      padding: 8px 8px 4px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 9px;
+      padding: 8px 10px; border-radius: var(--radius);
+      font-size: 13px; font-weight: 500; color: var(--text-muted);
+      cursor: pointer;
+      transition: background .12s, color .12s;
+      border: none; background: none; width: 100%; text-align: left;
+    }
+    .nav-item:hover { background: var(--surface-2); color: var(--text); }
+    .nav-item.active { background: var(--green-bg); color: var(--green); }
+    .nav-item .nav-icon { font-size: 15px; flex-shrink: 0; }
+
+    .sidebar-footer {
+      padding: 12px 14px;
+      border-top: 1px solid var(--border);
+    }
+    .user-info {
+      display: flex; align-items: center; gap: 9px; margin-bottom: 8px;
+    }
+    .user-info .user-detail { flex: 1; min-width: 0; }
+    .user-info .user-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* ─── Conteúdo ───────────────────────────────────────── */
+    .main-content { flex: 1; overflow-y: auto; }
+    .page-header {
+      padding: 20px 24px 0;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .page-title { font-size: 18px; font-weight: 600; }
+    .page-sub   { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+
+    .page-body { padding: 16px 24px 32px; }
+
+    .metrics-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .toolbar {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 14px; flex-wrap: wrap;
+    }
+    .toolbar input[type="text"] { max-width: 220px; }
+    .toolbar select { max-width: 160px; }
+    .toolbar-right { margin-left: auto; display: flex; gap: 8px; }
+
+    .reports-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px;
+    }
+    .report-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 18px 20px;
+      cursor: pointer;
+      transition: box-shadow .15s, border-color .15s;
+    }
+    .report-card:hover { box-shadow: var(--shadow-md); border-color: var(--border-dark); }
+    .report-icon { font-size: 24px; margin-bottom: 10px; }
+    .report-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .report-desc  { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+    .report-actions { margin-top: 14px; display: flex; gap: 6px; }
+
+    /* Status colors inline override */
+    .color-green  { color: var(--green); }
+    .color-amber  { color: var(--amber); }
+    .color-red    { color: var(--red); }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center; padding: 48px 20px; color: var(--text-muted);
+    }
+    .empty-state .empty-icon { font-size: 36px; margin-bottom: 12px; }
+    .empty-state p { font-size: 13px; }
+
+    /* Form row (2 colunas) */
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     TOAST CONTAINER
+══════════════════════════════════════════════════════ -->
+<div id="toast-container"></div>
+
+<!-- ══════════════════════════════════════════════════════
+     TELA DE LOGIN
+══════════════════════════════════════════════════════ -->
+<div id="screen-login">
+  <div class="login-box">
+    <div class="login-logo">📦</div>
+    <h1 style="text-align:center;font-size:18px;margin-bottom:4px">Estoque Escolar</h1>
+    <p style="text-align:center;font-size:12px;color:var(--text-muted);margin-bottom:20px">Rede Municipal · Acesso restrito</p>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="form-group">
+        <label class="form-label">E-mail institucional</label>
+        <input type="email" id="login-email" placeholder="seu@escola.edu.br" autocomplete="email" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Senha</label>
+        <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <div id="login-error" class="hidden" style="font-size:12px;color:var(--red);background:var(--red-bg);padding:8px 10px;border-radius:var(--radius)"></div>
+      <button class="btn btn-primary w-full" style="justify-content:center;margin-top:4px" onclick="handleLogin()">
+        Entrar no sistema
+      </button>
+    </div>
+
+    <hr class="login-divider" />
+    <p class="text-sm text-faint" style="text-align:center">
+      Versão 0.1 · Esboço inicial
+    </p>
+    <!-- ── DEMO: credenciais rápidas ─────────────────────── -->
+    <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">
+      <p class="text-sm text-faint" style="text-align:center;margin-bottom:2px">Entrar rápido (demo):</p>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm w-full" style="justify-content:center" onclick="demoLogin('diretora@escola.edu.br','dir123','diretora')">Diretora</button>
+        <button class="btn btn-sm w-full" style="justify-content:center" onclick="demoLogin('coord@escola.edu.br','coord123','coordenadora')">Coord.</button>
+        <button class="btn btn-sm w-full" style="justify-content:center" onclick="demoLogin('view@escola.edu.br','view123','visualizacao')">Leitura</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     TELA PRINCIPAL (APP)
+══════════════════════════════════════════════════════ -->
+<div id="screen-app" class="hidden">
+
+  <!-- ── Sidebar ──────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-brand">
+        <div class="sidebar-brand-icon">📦</div>
+        <span>Estoque</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Principal</div>
+      <button class="nav-item active" data-tab="produtos" onclick="switchTab('produtos', this)">
+        <span class="nav-icon">🗃</span> Produtos
+      </button>
+      <button class="nav-item" data-tab="movimentacoes" onclick="switchTab('movimentacoes', this)">
+        <span class="nav-icon">↕</span> Movimentações
+      </button>
+
+      <div class="sidebar-section-label" style="margin-top:8px">Gestão</div>
+      <button class="nav-item" data-tab="usuarios" onclick="switchTab('usuarios', this)" id="nav-usuarios">
+        <span class="nav-icon">👥</span> Usuários
+      </button>
+      <button class="nav-item" data-tab="relatorios" onclick="switchTab('relatorios', this)">
+        <span class="nav-icon">📊</span> Relatórios
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="avatar" id="sidebar-avatar">--</div>
+        <div class="user-detail">
+          <div class="user-name" id="sidebar-username">—</div>
+          <span class="badge badge-gray text-sm" id="sidebar-role-badge">—</span>
+        </div>
+      </div>
+      <button class="btn btn-sm w-full" style="justify-content:center" onclick="handleLogout()">Sair</button>
+    </div>
+  </aside>
+
+  <!-- ── Conteúdo ──────────────────────────────────────── -->
+  <main class="main-content">
+
+    <!-- ═══ ABA: PRODUTOS ═════════════════════════════════ -->
+    <section id="tab-produtos" class="tab-section">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Produtos em estoque</div>
+          <div class="page-sub">Cadastro, quantidades e status de todos os itens</div>
+        </div>
+        <button class="btn btn-primary" id="btn-novo-produto" onclick="openModal('modal-produto')">
+          + Novo produto
+        </button>
+      </div>
+
+      <div class="page-body">
+        <!-- Métricas -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-label">Total de itens</div>
+            <div class="metric-value" id="metric-total">—</div>
+            <div class="metric-sub">produtos cadastrados</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Estoque normal</div>
+            <div class="metric-value color-green" id="metric-normal">—</div>
+            <div class="metric-sub">acima do mínimo</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Estoque baixo</div>
+            <div class="metric-value color-amber" id="metric-baixo">—</div>
+            <div class="metric-sub">atenção necessária</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Zerados</div>
+            <div class="metric-value color-red" id="metric-zerado">—</div>
+            <div class="metric-sub">reposição urgente</div>
+          </div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+          <input type="text" id="busca-produto" placeholder="Buscar produto..." oninput="renderProdutos()" />
+          <select id="filtro-categoria" onchange="renderProdutos()">
+            <option value="">Todas as categorias</option>
+            <option>Papelaria</option>
+            <option>Limpeza</option>
+            <option>Higiene</option>
+            <option>Informática</option>
+            <option>Didático</option>
+            <option>Outros</option>
+          </select>
+          <select id="filtro-status" onchange="renderProdutos()">
+            <option value="">Todos os status</option>
+            <option value="normal">Normal</option>
+            <option value="baixo">Baixo</option>
+            <option value="zerado">Zerado</option>
+          </select>
+        </div>
+
+        <!-- Tabela -->
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Produto</th>
+                  <th>Categoria</th>
+                  <th>Qtd atual</th>
+                  <th>Un. medida</th>
+                  <th>Qtd mínima</th>
+                  <th>Status</th>
+                  <th>Última entrada</th>
+                  <th>Última saída</th>
+                  <th>Responsável</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-produtos">
+                <tr><td colspan="10"><div class="empty-state"><div class="empty-icon">🗃</div><p>Nenhum produto encontrado.</p></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ ABA: MOVIMENTAÇÕES ════════════════════════════ -->
+    <section id="tab-movimentacoes" class="tab-section hidden">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Movimentações</div>
+          <div class="page-sub">Entradas e saídas registradas no sistema</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary" id="btn-nova-entrada" onclick="openModal('modal-entrada')">+ Entrada</button>
+          <button class="btn" id="btn-nova-saida" onclick="openModal('modal-saida')">↓ Saída / Baixa</button>
+        </div>
+      </div>
+
+      <div class="page-body">
+        <div class="toolbar">
+          <input type="text" id="busca-mov" placeholder="Buscar produto ou responsável..." oninput="renderMovimentacoes()" />
+          <select id="filtro-tipo-mov" onchange="renderMovimentacoes()">
+            <option value="">Entradas e saídas</option>
+            <option value="entrada">Somente entradas</option>
+            <option value="saida">Somente saídas</option>
+          </select>
+          <input type="date" id="filtro-data-de" oninput="renderMovimentacoes()" title="De:" />
+          <input type="date" id="filtro-data-ate" oninput="renderMovimentacoes()" title="Até:" />
+        </div>
+
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data / Hora</th>
+                  <th>Produto</th>
+                  <th>Tipo</th>
+                  <th>Qtd</th>
+                  <th>Un.</th>
+                  <th>Destino / Origem</th>
+                  <th>Nº NF / Doc</th>
+                  <th>Quem registrou</th>
+                  <th>Observação</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-movimentacoes">
+                <tr><td colspan="9"><div class="empty-state"><div class="empty-icon">↕</div><p>Nenhuma movimentação registrada.</p></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ ABA: USUÁRIOS ═════════════════════════════════ -->
+    <section id="tab-usuarios" class="tab-section hidden">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Usuários e permissões</div>
+          <div class="page-sub">Controle de acesso ao sistema</div>
+        </div>
+        <button class="btn btn-primary" id="btn-novo-usuario" onclick="openModal('modal-usuario')">+ Novo usuário</button>
+      </div>
+
+      <div class="page-body">
+        <!-- Explicação de perfis -->
+        <div class="card card-body mb-16" style="margin-bottom:16px">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+            <div>
+              <span class="badge badge-purple" style="margin-bottom:6px">Diretora</span>
+              <p class="text-sm text-muted mt-4">Acesso total: cadastra produtos, registra entradas/saídas, gerencia usuários, exporta relatórios.</p>
+            </div>
+            <div>
+              <span class="badge badge-green" style="margin-bottom:6px">Coordenadora</span>
+              <p class="text-sm text-muted mt-4">Registra entradas e dá baixa em produtos. Não gerencia usuários nem exclui registros.</p>
+            </div>
+            <div>
+              <span class="badge badge-gray" style="margin-bottom:6px">Somente leitura</span>
+              <p class="text-sm text-muted mt-4">Consulta estoque e histórico de movimentações. Sem permissão para alterações.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Usuário</th>
+                  <th>E-mail</th>
+                  <th>Perfil</th>
+                  <th>Escola / Unidade</th>
+                  <th>Cadastrado em</th>
+                  <th>Último acesso</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-usuarios">
+                <tr><td colspan="8"><div class="empty-state"><div class="empty-icon">👥</div><p>Nenhum usuário cadastrado.</p></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ ABA: RELATÓRIOS ═══════════════════════════════ -->
+    <section id="tab-relatorios" class="tab-section hidden">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Relatórios</div>
+          <div class="page-sub">Exportação e consultas do estoque</div>
+        </div>
+      </div>
+
+      <div class="page-body">
+        <div class="reports-grid">
+          <div class="report-card">
+            <div class="report-icon">📋</div>
+            <div class="report-title">Posição atual do estoque</div>
+            <div class="report-desc">Todos os produtos com saldo atual, categoria, unidade de medida e status (normal, baixo, zerado).</div>
+            <div class="report-actions">
+              <button class="btn btn-sm" onclick="toast('Gerando PDF... (integração pendente)')">Exportar PDF</button>
+              <button class="btn btn-sm" onclick="toast('Gerando Excel... (integração pendente)')">Exportar Excel</button>
+            </div>
+          </div>
+          <div class="report-card">
+            <div class="report-icon">↕</div>
+            <div class="report-title">Movimentações por período</div>
+            <div class="report-desc">Entradas e saídas filtradas por intervalo de datas, produto específico ou usuário responsável.</div>
+            <div class="report-actions">
+              <button class="btn btn-sm" onclick="toast('Gerando PDF... (integração pendente)')">Exportar PDF</button>
+              <button class="btn btn-sm" onclick="toast('Gerando Excel... (integração pendente)')">Exportar Excel</button>
+            </div>
+          </div>
+          <div class="report-card">
+            <div class="report-icon">⚠️</div>
+            <div class="report-title">Itens críticos</div>
+            <div class="report-desc">Produtos zerados ou abaixo da quantidade mínima definida, com data da última reposição.</div>
+            <div class="report-actions">
+              <button class="btn btn-sm" onclick="toast('Gerando PDF... (integração pendente)')">Exportar PDF</button>
+              <button class="btn btn-sm" onclick="toast('Gerando Excel... (integração pendente)')">Exportar Excel</button>
+            </div>
+          </div>
+          <div class="report-card">
+            <div class="report-icon">🔍</div>
+            <div class="report-title">Log de auditoria</div>
+            <div class="report-desc">Histórico completo de ações: quem adicionou, editou ou deu baixa — com data, hora e IP de acesso.</div>
+            <div class="report-actions">
+              <button class="btn btn-sm" onclick="toast('Gerando PDF... (integração pendente)')">Exportar PDF</button>
+              <button class="btn btn-sm" onclick="toast('Gerando Excel... (integração pendente)')">Exportar Excel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     MODAIS
+══════════════════════════════════════════════════════ -->
+
+<!-- Modal: Novo / Editar Produto -->
+<div id="modal-produto" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-produto-title">Novo produto</h3>
+      <button class="btn btn-icon" onclick="closeModal('modal-produto')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="prod-id" />
+      <div class="form-group">
+        <label class="form-label">Nome do produto *</label>
+        <input type="text" id="prod-nome" placeholder="Ex: Papel A4" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Categoria *</label>
+          <select id="prod-categoria">
+            <option value="">Selecione...</option>
+            <option>Papelaria</option>
+            <option>Limpeza</option>
+            <option>Higiene</option>
+            <option>Informática</option>
+            <option>Didático</option>
+            <option>Outros</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Unidade de medida *</label>
+          <select id="prod-unidade">
+            <option value="">Selecione...</option>
+            <option>Unidade</option>
+            <option>Caixa</option>
+            <option>Pacote</option>
+            <option>Resma</option>
+            <option>Litro</option>
+            <option>Kg</option>
+            <option>Par</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Quantidade inicial</label>
+          <input type="number" id="prod-qtd" min="0" value="0" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Quantidade mínima</label>
+          <input type="number" id="prod-qtd-min" min="0" value="5" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Localização (sala, armário, etc.)</label>
+        <input type="text" id="prod-local" placeholder="Ex: Depósito sala 02, prateleira B" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Observações</label>
+        <textarea id="prod-obs" placeholder="Informações adicionais..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-produto')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarProduto()">Salvar produto</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Registrar Entrada -->
+<div id="modal-entrada" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Registrar entrada</h3>
+      <button class="btn btn-icon" onclick="closeModal('modal-entrada')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Produto *</label>
+        <select id="entrada-produto">
+          <option value="">Selecione o produto...</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Quantidade *</label>
+          <input type="number" id="entrada-qtd" min="1" value="1" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Data de entrada *</label>
+          <input type="date" id="entrada-data" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Fornecedor / Origem</label>
+          <input type="text" id="entrada-fornecedor" placeholder="Nome do fornecedor" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nº NF / Documento</label>
+          <input type="text" id="entrada-nf" placeholder="Ex: NF 00123" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Observações</label>
+        <textarea id="entrada-obs" placeholder="Informações adicionais..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-entrada')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarEntrada()">Registrar entrada</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Registrar Saída (Baixa) -->
+<div id="modal-saida" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Registrar saída / baixa</h3>
+      <button class="btn btn-icon" onclick="closeModal('modal-saida')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Produto *</label>
+        <select id="saida-produto">
+          <option value="">Selecione o produto...</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Quantidade *</label>
+          <input type="number" id="saida-qtd" min="1" value="1" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Data de saída *</label>
+          <input type="date" id="saida-data" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Destino / Finalidade *</label>
+        <input type="text" id="saida-destino" placeholder="Ex: Sala dos professores, turma 3A" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Observações</label>
+        <textarea id="saida-obs" placeholder="Motivo da baixa..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-saida')">Cancelar</button>
+      <button class="btn btn-danger" onclick="salvarSaida()">Confirmar baixa</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Novo Usuário -->
+<div id="modal-usuario" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-usuario-title">Novo usuário</h3>
+      <button class="btn btn-icon" onclick="closeModal('modal-usuario')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Nome completo *</label>
+          <input type="text" id="user-nome" placeholder="Nome do usuário" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">E-mail institucional *</label>
+          <input type="email" id="user-email" placeholder="usuario@escola.edu.br" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Perfil de acesso *</label>
+          <select id="user-perfil">
+            <option value="">Selecione...</option>
+            <option value="diretora">Diretora</option>
+            <option value="coordenadora">Coordenadora</option>
+            <option value="visualizacao">Somente leitura</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Escola / Unidade</label>
+          <input type="text" id="user-escola" placeholder="Ex: EMEF Central" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Senha temporária *</label>
+        <input type="text" id="user-senha" placeholder="O usuário deverá alterar no primeiro acesso" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-usuario')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarUsuario()">Criar usuário</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════════ -->
+<script>
+/* ─────────────────────────────────────────────────────────
+   SUPABASE — configuração futura
+   ─────────────────────────────────────────────────────────
+   Quando conectar ao Supabase:
+
+   1) Instale o SDK:
+      npm install @supabase/supabase-js
+      (ou use a CDN no <head>)
+
+   2) Inicialize:
+      const { createClient } = supabase;
+      const SUPABASE_URL = 'https://xxxx.supabase.co';
+      const SUPABASE_KEY = 'sua-anon-key-publica';
+      const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+   3) Troque as funções de estado local pelos métodos do Supabase:
+      // Buscar: await db.from('produtos').select('*')
+      // Inserir: await db.from('produtos').insert({...})
+      // Atualizar: await db.from('produtos').update({...}).eq('id', id)
+      // Autenticar: await db.auth.signInWithPassword({email, password})
+
+   4) Tabelas sugeridas no Supabase:
+      - usuarios (id, nome, email, perfil, escola, ativo, criado_em)
+      - produtos (id, nome, categoria, unidade, qtd_atual, qtd_minima,
+                  local, obs, criado_por, criado_em, atualizado_em)
+      - movimentacoes (id, produto_id, tipo, qtd, destino_origem,
+                       nf, registrado_por, data_mov, obs, criado_em)
+   ───────────────────────────────────────────────────────── */
+
+  /* ── Estado da aplicação ──────────────────────────────── */
+  const App = {
+    usuario: null,
+
+    // Dados locais (substituir por Supabase depois)
+    produtos: [
+      { id:1, nome:'Papel A4',       categoria:'Papelaria', unidade:'Resma',   qtd:350, qtdMin:50, local:'Depósito sala 01', obs:'', criadoPor:'Ana Dias',   ultimaEntrada:'08/04/2026', ultimaSaida:'01/04/2026' },
+      { id:2, nome:'Caneta azul',    categoria:'Papelaria', unidade:'Caixa',   qtd:12,  qtdMin:20, local:'Armário B',        obs:'', criadoPor:'Carla M.',   ultimaEntrada:'01/04/2026', ultimaSaida:'06/04/2026' },
+      { id:3, nome:'Álcool gel',     categoria:'Higiene',   unidade:'Litro',   qtd:0,   qtdMin:10, local:'Depósito limpeza', obs:'', criadoPor:'Ana Dias',   ultimaEntrada:'15/03/2026', ultimaSaida:'04/04/2026' },
+      { id:4, nome:'Detergente',     categoria:'Limpeza',   unidade:'Unidade', qtd:24,  qtdMin:12, local:'Depósito limpeza', obs:'', criadoPor:'Carla M.',   ultimaEntrada:'07/04/2026', ultimaSaida:'02/04/2026' },
+      { id:5, nome:'Sulfite colorido',categoria:'Papelaria',unidade:'Pacote',  qtd:8,   qtdMin:15, local:'Armário A',        obs:'', criadoPor:'Ana Dias',   ultimaEntrada:'20/03/2026', ultimaSaida:'25/03/2026' },
+    ],
+
+    movimentacoes: [
+      { id:1, produtoId:1, produto:'Papel A4',    tipo:'entrada', qtd:100, unidade:'Resma',   destino:'Fornecedor XYZ', nf:'NF 4821', registradoPor:'Ana Dias', data:'08/04/2026', obs:'' },
+      { id:2, produtoId:4, produto:'Detergente',  tipo:'entrada', qtd:12,  unidade:'Unidade', destino:'Fornecedor ABC', nf:'NF 1093', registradoPor:'Carla M.', data:'07/04/2026', obs:'' },
+      { id:3, produtoId:2, produto:'Caneta azul', tipo:'saida',   qtd:3,   unidade:'Caixa',   destino:'Sala professores', nf:'—',    registradoPor:'Carla M.', data:'06/04/2026', obs:'Reposição mensal' },
+      { id:4, produtoId:3, produto:'Álcool gel',  tipo:'saida',   qtd:5,   unidade:'Litro',   destino:'Corredores',     nf:'—',      registradoPor:'Ana Dias', data:'04/04/2026', obs:'Estoque zerou após saída' },
+    ],
+
+    usuarios: [
+      { id:1, nome:'Ana Dias',   email:'diretora@escola.edu.br', perfil:'diretora',     escola:'EMEF Central', ativo:true, criado:'01/01/2026', ultimoAcesso:'Hoje' },
+      { id:2, nome:'Carla M.',   email:'coord@escola.edu.br',    perfil:'coordenadora', escola:'EMEF Central', ativo:true, criado:'01/01/2026', ultimoAcesso:'Ontem' },
+      { id:3, nome:'Roberto P.', email:'view@escola.edu.br',     perfil:'visualizacao', escola:'EMEF Norte',   ativo:true, criado:'10/02/2026', ultimoAcesso:'03/04/2026' },
+    ],
+
+    nextId: { produto: 6, mov: 5, usuario: 4 },
+  };
+
+  /* ── Usuários demo (substituir por Supabase Auth) ──────── */
+  const DEMO_USERS = {
+    'diretora@escola.edu.br': { senha:'dir123',   perfil:'diretora',     nome:'Ana Dias' },
+    'coord@escola.edu.br':    { senha:'coord123', perfil:'coordenadora', nome:'Carla M.' },
+    'view@escola.edu.br':     { senha:'view123',  perfil:'visualizacao', nome:'Roberto P.' },
+  };
+
+  /* ── Permissões ───────────────────────────────────────── */
+  const PERMS = {
+    diretora:     { editarProdutos:true,  registrarMov:true,  gerirUsuarios:true },
+    coordenadora: { editarProdutos:false, registrarMov:true,  gerirUsuarios:false },
+    visualizacao: { editarProdutos:false, registrarMov:false, gerirUsuarios:false },
+  };
+
+  function perm(acao) {
+    if (!App.usuario) return false;
+    return PERMS[App.usuario.perfil]?.[acao] ?? false;
+  }
+
+  /* ── Helpers ──────────────────────────────────────────── */
+  function today() {
+    return new Date().toISOString().split('T')[0];
+  }
+
+  function fmt(dateStr) {
+    if (!dateStr || dateStr === '—') return '—';
+    if (dateStr.includes('/')) return dateStr; // já formatado
+    const [y,m,d] = dateStr.split('-');
+    return `${d}/${m}/${y}`;
+  }
+
+  function statusProduto(p) {
+    if (p.qtd === 0)            return { label:'Zerado', cls:'badge-red'   };
+    if (p.qtd < p.qtdMin)       return { label:'Baixo',  cls:'badge-amber' };
+    return                             { label:'Normal', cls:'badge-green' };
+  }
+
+  function perfilBadge(perfil) {
+    const map = {
+      diretora:     { label:'Diretora',    cls:'badge-purple' },
+      coordenadora: { label:'Coord.',      cls:'badge-green' },
+      visualizacao: { label:'Leitura',     cls:'badge-gray' },
+    };
+    return map[perfil] || { label: perfil, cls:'badge-gray' };
+  }
+
+  function iniciais(nome) {
+    return nome.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  }
+
+  /* ── Toast ────────────────────────────────────────────── */
+  function toast(msg, tipo='') {
+    const el = document.createElement('div');
+    el.className = `toast ${tipo ? 'toast-'+tipo : ''}`;
+    el.textContent = msg;
+    document.getElementById('toast-container').appendChild(el);
+    setTimeout(() => el.remove(), 3200);
+  }
+
+  /* ── Modal ────────────────────────────────────────────── */
+  function openModal(id) {
+    document.getElementById(id).classList.remove('hidden');
+  }
+  function closeModal(id) {
+    document.getElementById(id).classList.add('hidden');
+  }
+  // Fechar clicando fora
+  document.querySelectorAll('.modal-backdrop').forEach(bd => {
+    bd.addEventListener('click', e => { if (e.target === bd) bd.classList.add('hidden'); });
+  });
+
+  /* ── Login ────────────────────────────────────────────── */
+  function handleLogin() {
+    const email = document.getElementById('login-email').value.trim().toLowerCase();
+    const senha = document.getElementById('login-pass').value;
+    const err   = document.getElementById('login-error');
+
+    /* ── Supabase Auth (futuro):
+       const { data, error } = await db.auth.signInWithPassword({ email, password: senha });
+       if (error) { mostrarErro(error.message); return; }
+       const perfil = data.user.user_metadata.perfil;
+       iniciarSessao(email, nome, perfil);
+    ── */
+
+    const found = DEMO_USERS[email];
+    if (!found || found.senha !== senha) {
+      err.textContent = 'E-mail ou senha incorretos.';
+      err.classList.remove('hidden');
+      return;
+    }
+    err.classList.add('hidden');
+    iniciarSessao(email, found.nome, found.perfil);
+  }
+
+  function demoLogin(email, senha, perfil) {
+    document.getElementById('login-email').value = email;
+    document.getElementById('login-pass').value  = senha;
+    handleLogin();
+  }
+
+  function iniciarSessao(email, nome, perfil) {
+    App.usuario = { email, nome, perfil };
+
+    // Sidebar
+    document.getElementById('sidebar-username').textContent = nome;
+    document.getElementById('sidebar-avatar').textContent   = iniciais(nome);
+    const rb = document.getElementById('sidebar-role-badge');
+    const pb = perfilBadge(perfil);
+    rb.textContent = pb.label;
+    rb.className   = `badge ${pb.cls} text-sm`;
+
+    // Mostrar / esconder menu usuários
+    document.getElementById('nav-usuarios').style.display = perm('gerirUsuarios') ? '' : 'none';
+
+    // Botões protegidos
+    togglePermUI();
+
+    document.getElementById('screen-login').classList.add('hidden');
+    document.getElementById('screen-app').classList.remove('hidden');
+
+    renderAll();
+    toast(`Bem-vinda, ${nome}!`, 'success');
+  }
+
+  function handleLogout() {
+    App.usuario = null;
+    document.getElementById('screen-app').classList.add('hidden');
+    document.getElementById('screen-login').classList.remove('hidden');
+    document.getElementById('login-pass').value = '';
+    switchTab('produtos', document.querySelector('[data-tab="produtos"]'));
+  }
+
+  function togglePermUI() {
+    const show = (id, cond) => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = cond ? '' : 'none';
+    };
+    show('btn-novo-produto',  perm('editarProdutos'));
+    show('btn-nova-entrada',  perm('registrarMov'));
+    show('btn-nova-saida',    perm('registrarMov'));
+    show('btn-novo-usuario',  perm('gerirUsuarios'));
+  }
+
+  /* ── Navegação entre abas ─────────────────────────────── */
+  function switchTab(name, el) {
+    document.querySelectorAll('.tab-section').forEach(s => s.classList.add('hidden'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('tab-'+name).classList.remove('hidden');
+    if (el) el.classList.add('active');
+
+    // Preencher selects de produtos nos modais ao entrar em movimentações
+    if (name === 'movimentacoes') preencherSelectProdutos();
+  }
+
+  /* ── Renderização ─────────────────────────────────────── */
+  function renderAll() {
+    renderProdutos();
+    renderMovimentacoes();
+    renderUsuarios();
+  }
+
+  /* ── Produtos ─────────────────────────────────────────── */
+  function renderProdutos() {
+    const busca = (document.getElementById('busca-produto')?.value || '').toLowerCase();
+    const cat   = document.getElementById('filtro-categoria')?.value || '';
+    const sts   = document.getElementById('filtro-status')?.value || '';
+
+    let lista = App.produtos.filter(p => {
+      const status = statusProduto(p);
+      const matchBusca = p.nome.toLowerCase().includes(busca) || p.categoria.toLowerCase().includes(busca);
+      const matchCat   = !cat || p.categoria === cat;
+      const matchSts   = !sts || status.label.toLowerCase() === sts;
+      return matchBusca && matchCat && matchSts;
+    });
+
+    // Métricas
+    const total  = App.produtos.length;
+    const normal = App.produtos.filter(p => statusProduto(p).label === 'Normal').length;
+    const baixo  = App.produtos.filter(p => statusProduto(p).label === 'Baixo').length;
+    const zerado = App.produtos.filter(p => statusProduto(p).label === 'Zerado').length;
+    document.getElementById('metric-total').textContent  = total;
+    document.getElementById('metric-normal').textContent = normal;
+    document.getElementById('metric-baixo').textContent  = baixo;
+    document.getElementById('metric-zerado').textContent = zerado;
+
+    const tbody = document.getElementById('tbody-produtos');
+    if (!lista.length) {
+      tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><div class="empty-icon">🗃</div><p>Nenhum produto encontrado.</p></div></td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = lista.map(p => {
+      const st = statusProduto(p);
+      const podeEditar = perm('editarProdutos');
+      const podeMov    = perm('registrarMov');
+      return `
+        <tr>
+          <td class="font-semi">${p.nome}</td>
+          <td><span class="badge badge-gray">${p.categoria}</span></td>
+          <td class="font-semi">${p.qtd}</td>
+          <td class="text-muted">${p.unidade}</td>
+          <td class="text-muted">${p.qtdMin}</td>
+          <td><span class="badge ${st.cls}">${st.label}</span></td>
+          <td class="text-muted text-sm">${p.ultimaEntrada || '—'}</td>
+          <td class="text-muted text-sm">${p.ultimaSaida  || '—'}</td>
+          <td>
+            <div class="flex items-center gap-8">
+              <div class="avatar avatar-sm">${iniciais(p.criadoPor)}</div>
+              <span class="text-sm">${p.criadoPor}</span>
+            </div>
+          </td>
+          <td>
+            <div class="flex gap-8">
+              ${podeEditar ? `<button class="btn btn-sm" onclick="editarProduto(${p.id})">Editar</button>` : ''}
+              ${podeMov    ? `<button class="btn btn-sm" onclick="baixaRapida(${p.id})">Baixa</button>` : ''}
+            </div>
+          </td>
+        </tr>`;
+    }).join('');
+  }
+
+  /* ── Movimentações ────────────────────────────────────── */
+  function renderMovimentacoes() {
+    const busca = (document.getElementById('busca-mov')?.value || '').toLowerCase();
+    const tipo  = document.getElementById('filtro-tipo-mov')?.value || '';
+
+    let lista = App.movimentacoes.filter(m => {
+      const matchBusca = m.produto.toLowerCase().includes(busca) || m.registradoPor.toLowerCase().includes(busca);
+      const matchTipo  = !tipo || m.tipo === tipo;
+      return matchBusca && matchTipo;
+    });
+
+    const tbody = document.getElementById('tbody-movimentacoes');
+    if (!lista.length) {
+      tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">↕</div><p>Nenhuma movimentação encontrada.</p></div></td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = lista.slice().reverse().map(m => {
+      const cls  = m.tipo === 'entrada' ? 'badge-green' : 'badge-red';
+      const lbl  = m.tipo === 'entrada' ? '↑ Entrada'   : '↓ Saída';
+      return `
+        <tr>
+          <td class="text-mono text-sm">${m.data}</td>
+          <td class="font-semi">${m.produto}</td>
+          <td><span class="badge ${cls}">${lbl}</span></td>
+          <td class="font-semi">${m.qtd}</td>
+          <td class="text-muted">${m.unidade}</td>
+          <td>${m.destino || '—'}</td>
+          <td class="text-mono text-sm text-muted">${m.nf || '—'}</td>
+          <td>
+            <div class="flex items-center gap-8">
+              <div class="avatar avatar-sm">${iniciais(m.registradoPor)}</div>
+              <span class="text-sm">${m.registradoPor}</span>
+            </div>
+          </td>
+          <td class="text-muted text-sm">${m.obs || '—'}</td>
+        </tr>`;
+    }).join('');
+  }
+
+  /* ── Usuários ─────────────────────────────────────────── */
+  function renderUsuarios() {
+    const tbody = document.getElementById('tbody-usuarios');
+    if (!App.usuarios.length) {
+      tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">👥</div><p>Nenhum usuário cadastrado.</p></div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = App.usuarios.map(u => {
+      const pb = perfilBadge(u.perfil);
+      const podeMgr = perm('gerirUsuarios');
+      return `
+        <tr>
+          <td>
+            <div class="flex items-center gap-8">
+              <div class="avatar">${iniciais(u.nome)}</div>
+              <span class="font-semi">${u.nome}</span>
+            </div>
+          </td>
+          <td class="text-muted text-sm">${u.email}</td>
+          <td><span class="badge ${pb.cls}">${pb.label}</span></td>
+          <td>${u.escola || '—'}</td>
+          <td class="text-muted text-sm">${u.criado}</td>
+          <td class="text-muted text-sm">${u.ultimoAcesso}</td>
+          <td><span class="badge ${u.ativo ? 'badge-green' : 'badge-red'}">${u.ativo ? 'Ativo' : 'Inativo'}</span></td>
+          <td>
+            ${podeMgr ? `<button class="btn btn-sm" onclick="toggleUsuario(${u.id})">${u.ativo ? 'Desativar' : 'Ativar'}</button>` : '—'}
+          </td>
+        </tr>`;
+    }).join('');
+  }
+
+  /* ── Preencher selects de produtos ────────────────────── */
+  function preencherSelectProdutos() {
+    ['entrada-produto','saida-produto'].forEach(id => {
+      const sel = document.getElementById(id);
+      sel.innerHTML = '<option value="">Selecione o produto...</option>' +
+        App.produtos.map(p => `<option value="${p.id}">${p.nome} (${p.qtd} ${p.unidade})</option>`).join('');
+    });
+  }
+
+  /* ── Salvar produto ───────────────────────────────────── */
+  function salvarProduto() {
+    const id    = document.getElementById('prod-id').value;
+    const nome  = document.getElementById('prod-nome').value.trim();
+    const cat   = document.getElementById('prod-categoria').value;
+    const unid  = document.getElementById('prod-unidade').value;
+    const qtd   = parseInt(document.getElementById('prod-qtd').value) || 0;
+    const qtdMin= parseInt(document.getElementById('prod-qtd-min').value) || 5;
+    const local = document.getElementById('prod-local').value.trim();
+    const obs   = document.getElementById('prod-obs').value.trim();
+
+    if (!nome || !cat || !unid) { toast('Preencha os campos obrigatórios.', 'error'); return; }
+
+    /* Supabase (futuro):
+       await db.from('produtos').insert({ nome, categoria:cat, unidade:unid, qtd_atual:qtd, qtd_minima:qtdMin, local, obs, criado_por: App.usuario.nome });
+    */
+
+    if (id) {
+      // Editar
+      const p = App.produtos.find(x => x.id == id);
+      if (p) { Object.assign(p, { nome, categoria:cat, unidade:unid, qtd, qtdMin, local, obs }); }
+      toast('Produto atualizado!', 'success');
+    } else {
+      // Novo
+      App.produtos.push({
+        id: App.nextId.produto++, nome, categoria:cat, unidade:unid,
+        qtd, qtdMin, local, obs,
+        criadoPor: App.usuario.nome,
+        ultimaEntrada: '—', ultimaSaida: '—'
+      });
+      toast('Produto cadastrado!', 'success');
+    }
+
+    closeModal('modal-produto');
+    limparFormProduto();
+    renderProdutos();
+  }
+
+  function editarProduto(id) {
+    const p = App.produtos.find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('prod-id').value        = p.id;
+    document.getElementById('prod-nome').value      = p.nome;
+    document.getElementById('prod-categoria').value = p.categoria;
+    document.getElementById('prod-unidade').value   = p.unidade;
+    document.getElementById('prod-qtd').value       = p.qtd;
+    document.getElementById('prod-qtd-min').value   = p.qtdMin;
+    document.getElementById('prod-local').value     = p.local;
+    document.getElementById('prod-obs').value       = p.obs;
+    document.getElementById('modal-produto-title').textContent = 'Editar produto';
+    openModal('modal-produto');
+  }
+
+  function limparFormProduto() {
+    ['prod-id','prod-nome','prod-local','prod-obs'].forEach(id => document.getElementById(id).value='');
+    document.getElementById('prod-qtd').value = '0';
+    document.getElementById('prod-qtd-min').value = '5';
+    document.getElementById('prod-categoria').value = '';
+    document.getElementById('prod-unidade').value = '';
+    document.getElementById('modal-produto-title').textContent = 'Novo produto';
+  }
+
+  /* ── Salvar entrada ───────────────────────────────────── */
+  function salvarEntrada() {
+    const prodId  = parseInt(document.getElementById('entrada-produto').value);
+    const qtd     = parseInt(document.getElementById('entrada-qtd').value) || 0;
+    const data    = document.getElementById('entrada-data').value;
+    const fornec  = document.getElementById('entrada-fornecedor').value.trim();
+    const nf      = document.getElementById('entrada-nf').value.trim();
+    const obs     = document.getElementById('entrada-obs').value.trim();
+
+    if (!prodId || !qtd || !data) { toast('Preencha os campos obrigatórios.', 'error'); return; }
+
+    const prod = App.produtos.find(p => p.id === prodId);
+    if (!prod) return;
+
+    prod.qtd += qtd;
+    prod.ultimaEntrada = fmt(data);
+
+    App.movimentacoes.push({
+      id: App.nextId.mov++,
+      produtoId: prodId,
+      produto: prod.nome,
+      tipo: 'entrada', qtd, unidade: prod.unidade,
+      destino: fornec || 'Não informado', nf: nf || '—',
+      registradoPor: App.usuario.nome,
+      data: fmt(data), obs
+    });
+
+    toast(`Entrada de ${qtd} ${prod.unidade} de "${prod.nome}" registrada!`, 'success');
+    closeModal('modal-entrada');
+    renderProdutos();
+    renderMovimentacoes();
+  }
+
+  /* ── Salvar saída / baixa ─────────────────────────────── */
+  function salvarSaida() {
+    const prodId  = parseInt(document.getElementById('saida-produto').value);
+    const qtd     = parseInt(document.getElementById('saida-qtd').value) || 0;
+    const data    = document.getElementById('saida-data').value;
+    const destino = document.getElementById('saida-destino').value.trim();
+    const obs     = document.getElementById('saida-obs').value.trim();
+
+    if (!prodId || !qtd || !data || !destino) { toast('Preencha os campos obrigatórios.', 'error'); return; }
+
+    const prod = App.produtos.find(p => p.id === prodId);
+    if (!prod) return;
+
+    if (qtd > prod.qtd) { toast(`Quantidade insuficiente. Estoque atual: ${prod.qtd} ${prod.unidade}.`, 'error'); return; }
+
+    prod.qtd -= qtd;
+    prod.ultimaSaida = fmt(data);
+
+    App.movimentacoes.push({
+      id: App.nextId.mov++,
+      produtoId: prodId,
+      produto: prod.nome,
+      tipo: 'saida', qtd, unidade: prod.unidade,
+      destino, nf: '—',
+      registradoPor: App.usuario.nome,
+      data: fmt(data), obs
+    });
+
+    toast(`Baixa de ${qtd} ${prod.unidade} de "${prod.nome}" registrada!`, 'success');
+    closeModal('modal-saida');
+    renderProdutos();
+    renderMovimentacoes();
+  }
+
+  function baixaRapida(prodId) {
+    preencherSelectProdutos();
+    document.getElementById('saida-produto').value = prodId;
+    document.getElementById('saida-data').value    = today();
+    openModal('modal-saida');
+  }
+
+  /* ── Salvar usuário ───────────────────────────────────── */
+  function salvarUsuario() {
+    const nome   = document.getElementById('user-nome').value.trim();
+    const email  = document.getElementById('user-email').value.trim().toLowerCase();
+    const perfil = document.getElementById('user-perfil').value;
+    const escola = document.getElementById('user-escola').value.trim();
+
+    if (!nome || !email || !perfil) { toast('Preencha os campos obrigatórios.', 'error'); return; }
+
+    /* Supabase (futuro):
+       await db.auth.admin.createUser({ email, password, email_confirm: true,
+         user_metadata: { nome, perfil, escola } });
+    */
+
+    App.usuarios.push({
+      id: App.nextId.usuario++, nome, email, perfil, escola,
+      ativo: true,
+      criado: fmt(today()),
+      ultimoAcesso: '—'
+    });
+
+    toast(`Usuário "${nome}" criado!`, 'success');
+    closeModal('modal-usuario');
+    renderUsuarios();
+  }
+
+  function toggleUsuario(id) {
+    const u = App.usuarios.find(x => x.id === id);
+    if (!u) return;
+    u.ativo = !u.ativo;
+    toast(`Usuário ${u.ativo ? 'ativado' : 'desativado'}.`);
+    renderUsuarios();
+  }
+
+  /* ── Preencher data de hoje nos modais ─────────────────── */
+  document.getElementById('entrada-data').value = today();
+  document.getElementById('saida-data').value   = today();
+
+  /* ── Login com Enter ──────────────────────────────────── */
+  document.getElementById('login-pass').addEventListener('keydown', e => {
+    if (e.key === 'Enter') handleLogin();
+  });
+</script>
+</body>
+</html>
