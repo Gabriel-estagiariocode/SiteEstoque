@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -266,6 +266,179 @@
     .report-desc  { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
     .report-actions { margin-top: 14px; display: flex; gap: 6px; }
 
+    .info-hero {
+      background:
+        radial-gradient(circle at top right, color-mix(in srgb, var(--green-bg) 85%, transparent) 0, transparent 38%),
+        linear-gradient(135deg, var(--surface), var(--surface-2));
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      padding: 28px;
+      margin-bottom: 18px;
+    }
+    .info-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: var(--green-bg);
+      color: var(--green);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .info-hero h3 {
+      font-size: 24px;
+      line-height: 1.2;
+      margin-bottom: 10px;
+    }
+    .info-hero p {
+      max-width: 760px;
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 14px;
+    }
+    .info-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      padding: 22px;
+    }
+    .info-panel h4 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .info-panel p {
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+    .info-panel p:last-child {
+      margin-bottom: 0;
+    }
+    .info-highlight {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface-2);
+      margin-top: 14px;
+    }
+    .info-highlight-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: var(--green-bg);
+      color: var(--green);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 16px;
+    }
+    .info-contact-card {
+      background: linear-gradient(180deg, var(--surface), color-mix(in srgb, var(--surface-2) 92%, transparent));
+    }
+    .info-contact-item {
+      padding: 14px 0;
+      border-top: 1px solid var(--border);
+    }
+    .info-contact-item:first-of-type {
+      border-top: none;
+      padding-top: 0;
+    }
+    .info-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-faint);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: 6px;
+    }
+    .info-value {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+      line-height: 1.6;
+    }
+    .info-email {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface-2);
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .info-email:hover {
+      background: var(--bg);
+    }
+    .info-legal-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 14px;
+    }
+    .info-legal-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      padding: 22px;
+    }
+    .info-legal-card h4 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .info-legal-card p {
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+    .info-legal-card p:last-child {
+      margin-bottom: 0;
+    }
+    .doc-placeholder {
+      border: 1px dashed var(--border-dark);
+      background: linear-gradient(180deg, var(--surface-2), var(--surface));
+      border-radius: var(--radius-lg);
+      padding: 18px;
+      margin-top: 14px;
+    }
+    .doc-placeholder-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .doc-placeholder-meta {
+      color: var(--text-faint);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .doc-placeholder-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+
     .color-green { color: var(--green); }
     .color-amber { color: var(--amber); }
     .color-red   { color: var(--red); }
@@ -283,6 +456,9 @@
         padding-inline: 10px;
       }
       .theme-toggle-label { display: none; }
+      .info-grid { grid-template-columns: 1fr; }
+      .info-legal-grid { grid-template-columns: 1fr; }
+      .info-hero { padding: 22px; }
     }
   </style>
 </head>
@@ -295,9 +471,9 @@
 ══════════════════════════════════════════════════════ -->
 <div id="screen-login">
   <div class="login-box">
-    <div class="login-logo">📦</div>
+    <div class="login-logo">&#128230;</div>
     <h1 style="text-align:center;font-size:18px;margin-bottom:4px">Estoque Escolar</h1>
-    <p style="text-align:center;font-size:12px;color:var(--text-muted);margin-bottom:20px">Rede Municipal · Acesso restrito</p>
+    <p style="text-align:center;font-size:12px;color:var(--text-muted);margin-bottom:20px">Rede Municipal &middot; Acesso restrito</p>
 
     <div style="display:flex;flex-direction:column;gap:12px">
       <div class="form-group">
@@ -306,7 +482,7 @@
       </div>
       <div class="form-group">
         <label class="form-label">Senha</label>
-        <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" />
+        <input type="password" id="login-pass" placeholder="********" autocomplete="current-password" />
       </div>
       <div id="login-error" class="hidden" style="font-size:12px;color:var(--red);background:var(--red-bg);padding:8px 10px;border-radius:var(--radius)"></div>
       <button class="btn btn-primary w-full" id="btn-login" style="justify-content:center;margin-top:4px" onclick="handleLogin()">
@@ -315,7 +491,7 @@
     </div>
 
     <hr class="login-divider" />
-    <p class="text-sm text-faint" style="text-align:center">Versão 0.2 · Supabase integrado</p>
+    <p class="text-sm text-faint" style="text-align:center">Vers&atilde;o 0.2 &middot; Supabase integrado</p>
   </div>
 </div>
 
@@ -327,24 +503,27 @@
   <aside class="sidebar">
     <div class="sidebar-top">
       <div class="sidebar-brand">
-        <div class="sidebar-brand-icon">📦</div>
+        <div class="sidebar-brand-icon">&#128230;</div>
         <span>Estoque</span>
       </div>
     </div>
     <nav class="sidebar-nav">
       <div class="sidebar-section-label">Principal</div>
       <button class="nav-item active" data-tab="produtos" onclick="switchTab('produtos',this)">
-        <span class="nav-icon">🗃</span> Produtos
+        <span class="nav-icon">&#128230;</span> Produtos
       </button>
       <button class="nav-item" data-tab="movimentacoes" onclick="switchTab('movimentacoes',this)">
-        <span class="nav-icon">↕</span> Movimentações
+        <span class="nav-icon">&harr;</span> Movimenta&ccedil;&otilde;es
       </button>
-      <div class="sidebar-section-label" style="margin-top:8px">Gestão</div>
+      <div class="sidebar-section-label" style="margin-top:8px">Gest&atilde;o</div>
       <button class="nav-item" data-tab="usuarios" onclick="switchTab('usuarios',this)" id="nav-usuarios">
-        <span class="nav-icon">👥</span> Usuários
+        <span class="nav-icon">&#128101;</span> Usu&aacute;rios
       </button>
       <button class="nav-item" data-tab="relatorios" onclick="switchTab('relatorios',this)">
-        <span class="nav-icon">📊</span> Relatórios
+        <span class="nav-icon">&#128202;</span> Relat&oacute;rios
+      </button>
+            <button class="nav-item" data-tab="informacoes" onclick="switchTab('informacoes',this)">
+        <span class="nav-icon">i</span> Informa&ccedil;&otilde;es
       </button>
     </nav>
     <div class="sidebar-footer">
@@ -372,7 +551,7 @@
           <button class="theme-toggle" id="theme-toggle-app" type="button" onclick="toggleTheme()" aria-label="Alternar modo escuro">
             <span class="theme-toggle-label">Modo escuro</span>
             <span class="theme-switch" aria-hidden="true">
-              <span class="theme-switch-thumb">🌙</span>
+              <span class="theme-switch-thumb">&#9790;</span>
             </span>
           </button>
           <button class="btn btn-primary" id="btn-novo-produto" onclick="abrirModalNovoProduto()">+ Novo produto</button>
@@ -521,6 +700,80 @@
             <div class="report-title">Log de auditoria</div>
             <div class="report-desc">Histórico completo de todas as movimentações registradas.</div>
             <div class="report-actions"><button class="btn btn-sm" onclick="exportarMovimentacoesCSV()">Exportar CSV</button></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+        <section id="tab-informacoes" class="tab-section hidden">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Informa&ccedil;&otilde;es</div>
+          <div class="page-sub">Cr&eacute;ditos do projeto, contexto de cria&ccedil;&atilde;o e canais de suporte</div>
+        </div>
+      </div>
+      <div class="page-body">
+        <div class="info-hero">
+          <div class="info-kicker">Projeto institucional</div>
+          <h3>Uma solu&ccedil;&atilde;o criada para tornar o controle de estoque mais organizado, claro e acess&iacute;vel para a rotina da rede municipal.</h3>
+          <p>Esta &aacute;rea re&uacute;ne as principais informa&ccedil;&otilde;es sobre a origem do sistema, a equipe que acompanhou seu desenvolvimento e os canais indicados para suporte, d&uacute;vidas e sugest&otilde;es de melhoria.</p>
+        </div>
+
+        <div class="info-grid">
+          <div class="info-panel">
+            <h4>Idealiza&ccedil;&atilde;o e desenvolvimento</h4>
+            <p>O site foi idealizado e desenvolvido pelo estagi&aacute;rio Gabriel Batista Ribeiro, integrante da Prefeitura Municipal de Quat&aacute;, durante seu per&iacute;odo de atua&ccedil;&atilde;o no setor.</p>
+            <p>O trabalho foi realizado com supervis&atilde;o t&eacute;cnica e acompanhamento direto de Ana Paula Braatz dos Santos Vieira e Rodrigo Costa da Silva, Analistas de Tecnologia da Informa&ccedil;&atilde;o do Setor de T.I.</p>
+
+            <div class="info-highlight">
+              <div class="info-highlight-icon">+</div>
+              <div>
+                <div class="font-semi">Prop&oacute;sito da plataforma</div>
+                <p style="margin:4px 0 0">Oferecer uma base mais confi&aacute;vel para o controle de materiais, facilitar consultas e apoiar a gest&atilde;o do estoque com mais praticidade no dia a dia.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="info-panel info-contact-card">
+            <h4>Suporte e contato</h4>
+
+            <div class="info-contact-item">
+              <div class="info-label">Chamados e solicita&ccedil;&otilde;es</div>
+              <div class="info-value">Para esclarecer d&uacute;vidas, reportar problemas ou sugerir melhorias no sistema, o canal recomendado &eacute; a abertura de chamado pelo TomTicket, ferramenta atualmente utilizada para esse atendimento.</div>
+            </div>
+
+            <div class="info-contact-item">
+              <div class="info-label">Contato por e-mail</div>
+              <div class="info-value">Tamb&eacute;m &eacute; poss&iacute;vel encaminhar uma mensagem diretamente ao estagi&aacute;rio respons&aacute;vel pelo desenvolvimento do site.</div>
+              <a class="info-email" href="mailto:estagiario.ti@quata.sp.gov.br">estagiario.ti@quata.sp.gov.br</a>
+            </div>
+
+            <div class="info-contact-item">
+              <div class="info-label">Supervis&atilde;o do projeto</div>
+              <div class="info-value">Ana Paula Braatz dos Santos Vieira<br>Rodrigo Costa da Silva</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-legal-grid">
+          <div class="info-legal-card">
+            <h4>Autoria e desenvolvimento</h4>
+            <p>Este sistema foi desenvolvido por Gabriel Batista Ribeiro.</p>
+            <p>A autoria intelectual do desenvolvimento pertence ao seu criador, sem preju&iacute;zo do uso institucional pela Prefeitura Municipal de Quat&aacute;, observadas as autoriza&ccedil;&otilde;es e condi&ccedil;&otilde;es formais aplic&aacute;veis.</p>
+          </div>
+
+          <div class="info-legal-card">
+            <h4>Termo de licen&ccedil;a institucional</h4>
+            <p>Este espa&ccedil;o foi preparado para receber o documento oficial de licen&ccedil;a de uso do sistema, a ser disponibilizado em formato `.doc` e formalizado com assinatura do Prefeito.</p>
+
+            <div class="doc-placeholder">
+              <div class="doc-placeholder-title">Documento ainda n&atilde;o anexado</div>
+              <div class="doc-placeholder-meta">Quando o arquivo estiver pronto, este bloco pode apontar para o termo oficial, exibindo nome do documento, data, vers&atilde;o e situa&ccedil;&atilde;o da assinatura.</div>
+              <div class="doc-placeholder-actions">
+                <button class="btn btn-sm" type="button" disabled>Termo de licen&ccedil;a</button>
+                <button class="btn btn-sm" type="button" disabled>Aguardando documento</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -778,7 +1031,7 @@
 
     const escuroAtivo = temaFinal === 'dark';
     document.querySelectorAll('.theme-switch-thumb').forEach(icon => {
-      icon.textContent = escuroAtivo ? '☀' : '🌙';
+      icon.innerHTML = escuroAtivo ? '&#9728;' : '&#9790;';
     });
     document.querySelectorAll('.theme-toggle-label').forEach(label => {
       label.textContent = escuroAtivo ? 'Modo Escuro' : 'Modo Claro';
@@ -1304,3 +1557,8 @@
 </script>
 </body>
 </html>
+
+
+
+
+
