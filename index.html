@@ -1166,6 +1166,35 @@
     return body;
   }
 
+  async function chamarAdminAPI(url, options = {}) {
+    const { data: { session } } = await db.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error('Sua sessao expirou. Entre novamente.');
+    }
+
+    const resp = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+        ...(options.headers || {})
+      }
+    });
+
+    let body = {};
+    try {
+      body = await resp.json();
+    } catch (_) {
+      body = {};
+    }
+
+    if (!resp.ok) {
+      throw new Error(body.error || 'Nao foi possivel concluir a operacao.');
+    }
+
+    return body;
+  }
+
   /* ══════════════════════════════════════════════════════
      NAVEGAÇÃO
   ══════════════════════════════════════════════════════ */
@@ -1201,10 +1230,13 @@
   }
 
   async function carregarUsuarios() {
-    const { data, error } = await db.from('perfis').select('*').order('criado_em');
-    if (error) { toast('Erro ao carregar usuários: ' + error.message, 'error'); return; }
-    App.usuarios = data || [];
-    renderUsuarios();
+    try {
+      const body = await chamarAdminAPI('/api/list-users');
+      App.usuarios = body.users || [];
+      renderUsuarios();
+    } catch (error) {
+      toast('Erro ao carregar usuários: ' + error.message, 'error');
+    }
   }
 
   /* ══════════════════════════════════════════════════════
@@ -1302,7 +1334,7 @@
         <td>${u.escola || '—'}</td>
         <td class="text-muted text-sm">${fmtData(u.criado_em)}</td>
         <td><span class="badge ${u.ativo ? 'badge-green' : 'badge-red'}">${u.ativo ? 'Ativo' : 'Inativo'}</span></td>
-        <td><button class="btn btn-sm" onclick="toggleUsuario('${u.id}', ${u.ativo})">${u.ativo ? 'Desativar' : 'Ativar'}</button></td>
+        <td>${perm('gerirUsuarios') ? `<button class="btn btn-sm" onclick="toggleUsuario('${u.id}', ${u.ativo})">${u.ativo ? 'Desativar' : 'Ativar'}</button>` : '—'}</td>
       </tr>`;
     }).join('');
   }
@@ -1528,11 +1560,17 @@ async function salvarUsuario() {
   
   // Aguarda 1 segundo para o trigger processar antes de recarregar
   setTimeout(async () => await carregarUsuarios(), 1000);
-}
+  }
 
   async function toggleUsuario(id, ativoAtual) {
-    const { error } = await db.from('perfis').update({ ativo: !ativoAtual }).eq('id', id);
-    if (error) { toast('Erro ao atualizar usuário.', 'error'); return; }
+    try {
+      await chamarAdminAPI('/api/toggle-user', {
+        method: 'POST',
+        body: JSON.stringify({ id, ativo: !ativoAtual })
+      });
+    } catch (error) {
+      toast('Erro ao atualizar usuário: ' + error.message, 'error'); return;
+    }
     toast(`Usuário ${ativoAtual ? 'desativado' : 'ativado'}.`);
     await carregarUsuarios();
   }
@@ -1588,6 +1626,5 @@ async function salvarUsuario() {
 </script>
 </body>
 </html>
-
 
 
