@@ -1457,47 +1457,52 @@
   /* ══════════════════════════════════════════════════════
      USUÁRIOS
   ══════════════════════════════════════════════════════ */
-  async function salvarUsuario() {
-    const nome   = document.getElementById('user-nome').value.trim();
-    const email  = document.getElementById('user-email').value.trim().toLowerCase();
-    const perfil = document.getElementById('user-perfil').value;
-    const escola = document.getElementById('user-escola').value.trim();
-    const senha  = document.getElementById('user-senha').value;
-    const errEl  = document.getElementById('user-error');
+async function salvarUsuario() {
+  const nome   = document.getElementById('user-nome').value.trim();
+  const email  = document.getElementById('user-email').value.trim().toLowerCase();
+  const perfil = document.getElementById('user-perfil').value;
+  const escola = document.getElementById('user-escola').value.trim();
+  const senha  = document.getElementById('user-senha').value;
+  const errEl  = document.getElementById('user-error');
 
-    if (!nome || !email || !perfil || !senha) {
-      errEl.textContent = 'Preencha todos os campos obrigatórios.';
-      errEl.classList.remove('hidden'); return;
-    }
-    if (senha.length < 6) {
-      errEl.textContent = 'A senha deve ter no mínimo 6 caracteres.';
-      errEl.classList.remove('hidden'); return;
-    }
-
-    const btn = document.getElementById('btn-salvar-usuario');
-    btn.disabled = true; btn.textContent = 'Criando...';
-    errEl.classList.add('hidden');
-
-    const { data, error } = await db.auth.signUp({ email, password: senha });
-
-    if (error) {
-      errEl.textContent = 'Erro: ' + error.message;
-      errEl.classList.remove('hidden');
-      btn.disabled = false; btn.textContent = 'Criar usuário'; return;
-    }
-
-    if (data.user) {
-      await db.from('perfis').insert({ id: data.user.id, nome, email, perfil, escola: escola || null, ativo: true });
-    }
-
-    btn.disabled = false; btn.textContent = 'Criar usuário';
-    toast(`Usuário "${nome}" criado com sucesso!`, 'success');
-    closeModal('modal-usuario');
-    // Limpar campos
-    ['user-nome','user-email','user-escola','user-senha'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('user-perfil').value = '';
-    await carregarUsuarios();
+  if (!nome || !email || !perfil || !senha) {
+    errEl.textContent = 'Preencha todos os campos obrigatórios.';
+    errEl.classList.remove('hidden'); return;
   }
+  if (senha.length < 6) {
+    errEl.textContent = 'A senha deve ter no mínimo 6 caracteres.';
+    errEl.classList.remove('hidden'); return;
+  }
+
+  const btn = document.getElementById('btn-salvar-usuario');
+  btn.disabled = true; btn.textContent = 'Criando...';
+  errEl.classList.add('hidden');
+
+  // Passa nome, perfil e escola como metadata
+  // O trigger no banco cria o perfil automaticamente
+  const { data, error } = await db.auth.signUp({
+    email,
+    password: senha,
+    options: {
+      data: { nome, perfil, escola: escola || null }
+    }
+  });
+
+  btn.disabled = false; btn.textContent = 'Criar usuário';
+
+  if (error) {
+    errEl.textContent = 'Erro: ' + error.message;
+    errEl.classList.remove('hidden'); return;
+  }
+
+  toast(`Usuário "${nome}" criado com sucesso!`, 'success');
+  closeModal('modal-usuario');
+  ['user-nome','user-email','user-escola','user-senha'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('user-perfil').value = '';
+  
+  // Aguarda 1 segundo para o trigger processar antes de recarregar
+  setTimeout(async () => await carregarUsuarios(), 1000);
+}
 
   async function toggleUsuario(id, ativoAtual) {
     const { error } = await db.from('perfis').update({ ativo: !ativoAtual }).eq('id', id);
