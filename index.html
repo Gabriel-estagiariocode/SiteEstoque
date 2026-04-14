@@ -1137,6 +1137,35 @@
     show('btn-novo-usuario', perm('gerirUsuarios'));
   }
 
+  async function criarUsuarioViaAPI(payload) {
+    const { data: { session } } = await db.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error('Sua sessao expirou. Entre novamente para criar usuarios.');
+    }
+
+    const resp = await fetch('/api/create-user', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    let body = {};
+    try {
+      body = await resp.json();
+    } catch (_) {
+      body = {};
+    }
+
+    if (!resp.ok) {
+      throw new Error(body.error || 'Nao foi possivel criar o usuario.');
+    }
+
+    return body;
+  }
+
   /* ══════════════════════════════════════════════════════
      NAVEGAÇÃO
   ══════════════════════════════════════════════════════ */
@@ -1478,22 +1507,19 @@ async function salvarUsuario() {
   btn.disabled = true; btn.textContent = 'Criando...';
   errEl.classList.add('hidden');
 
-  // Passa nome, perfil e escola como metadata
-  // O trigger no banco cria o perfil automaticamente
-  const { data, error } = await db.auth.signUp({
-    email,
-    password: senha,
-    options: {
-      data: { nome, perfil, escola: escola || null }
-    }
-  });
-
-  btn.disabled = false; btn.textContent = 'Criar usuário';
-
-  if (error) {
-    errEl.textContent = 'Erro: ' + error.message;
+  try {
+    await criarUsuarioViaAPI({ nome, email, perfil, escola, senha });
+  } catch (error) {
+    const msg = (error?.message || '').toLowerCase();
+    const friendly = msg.includes('fetch')
+      ? 'Nao consegui acessar a rota de criacao. Se estiver rodando so o HTML localmente, publique no Vercel ou configure um backend para criar usuarios.'
+      : error.message;
+    btn.disabled = false; btn.textContent = 'Criar usuário';
+    errEl.textContent = 'Erro: ' + friendly;
     errEl.classList.remove('hidden'); return;
   }
+
+  btn.disabled = false; btn.textContent = 'Criar usuário';
 
   toast(`Usuário "${nome}" criado com sucesso!`, 'success');
   closeModal('modal-usuario');
@@ -1562,8 +1588,6 @@ async function salvarUsuario() {
 </script>
 </body>
 </html>
-
-
 
 
 
