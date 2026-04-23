@@ -109,6 +109,7 @@
     .btn-primary:hover { background: #255c43; border-color: #255c43; }
     .btn-danger { background: var(--red-bg); color: var(--red); border-color: #FCA5A5; }
     .btn-sm { padding: 4px 10px; font-size: 12px; }
+    .btn-xs { padding: 3px 8px; font-size: 11px; gap: 4px; }
     .btn-icon { padding: 6px; border: none; background: none; }
     .btn-icon:hover { background: var(--surface-2); border-radius: var(--radius); }
 
@@ -136,11 +137,12 @@
     .metric-sub   { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
 
     .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    thead th { padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; background: var(--surface-2); border-bottom: 1px solid var(--border); white-space: nowrap; }
-    tbody td { padding: 11px 14px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    thead th { padding: 9px 10px; text-align: left; font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; background: var(--surface-2); border-bottom: 1px solid var(--border); white-space: nowrap; }
+    tbody td { padding: 9px 10px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
     tbody tr:last-child td { border-bottom: none; }
     tbody tr:hover td { background: var(--bg); }
+    .actions-cell { white-space: nowrap; width: 1%; }
 
     .avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; flex-shrink: 0; background: var(--purple-bg); color: var(--purple); }
     .avatar-sm { width: 26px; height: 26px; font-size: 10px; }
@@ -662,11 +664,11 @@
               <thead>
                 <tr>
                   <th>Data</th><th>Produto</th><th>Tipo</th><th>Qtd</th><th>Unidade</th>
-                  <th>Destino / Origem</th><th>NF / Doc</th><th>Registrado por</th><th>Observação</th>
+                  <th>Destino / Origem</th><th>NF / Doc</th><th>Registrado por</th><th>Observação</th><th>Ações</th>
                 </tr>
               </thead>
               <tbody id="tbody-movimentacoes">
-                <tr><td colspan="9" style="text-align:center;padding:32px;color:var(--text-faint)">Carregando...</td></tr>
+                <tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text-faint)">Carregando...</td></tr>
               </tbody>
             </table>
           </div>
@@ -987,6 +989,25 @@
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-excluir-produto')">Cancelar</button>
       <button class="btn btn-danger" id="btn-confirmar-exclusao-produto" onclick="confirmarExclusaoProduto()">Excluir produto</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Confirmar Exclusão de Movimentação -->
+<div id="modal-excluir-movimentacao" class="modal-backdrop hidden">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3>Excluir movimentação</h3>
+      <button class="btn btn-icon" onclick="closeModal('modal-excluir-movimentacao')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="delete-mov-id" />
+      <p>Tem certeza que deseja excluir esta movimentação de <span class="font-semi" id="delete-mov-produto">—</span>?</p>
+      <div class="info-box">Ao excluir, o estoque do produto será ajustado automaticamente para desfazer essa movimentação.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-excluir-movimentacao')">Cancelar</button>
+      <button class="btn btn-danger" id="btn-confirmar-exclusao-mov" onclick="confirmarExclusaoMovimentacao()">Excluir movimentação</button>
     </div>
   </div>
 </div>
@@ -1382,10 +1403,10 @@
         <td class="text-muted text-sm">${fmtData(p.ultima_entrada)}</td>
         <td class="text-muted text-sm">${fmtData(p.ultima_saida)}</td>
         <td><div class="flex items-center gap-8"><div class="avatar avatar-sm">${iniciais(p.criado_por)}</div><span class="text-sm">${p.criado_por || '—'}</span></div></td>
-        <td><div class="flex gap-8">
-          ${perm('editarProdutos') ? `<button class="btn btn-sm" onclick="abrirModalEditarProduto(${p.id})">Editar</button>` : ''}
-          ${perm('editarProdutos') ? `<button class="btn btn-sm btn-danger" onclick="abrirModalExcluirProduto(${p.id})">Excluir</button>` : ''}
-          ${perm('registrarMov')   ? `<button class="btn btn-sm" onclick="baixaRapida(${p.id})">Baixa</button>` : ''}
+        <td class="actions-cell"><div class="flex gap-8">
+          ${perm('editarProdutos') ? `<button class="btn btn-xs" onclick="abrirModalEditarProduto(${p.id})">Editar</button>` : ''}
+          ${perm('editarProdutos') ? `<button class="btn btn-xs btn-danger" onclick="abrirModalExcluirProduto(${p.id})">Excluir</button>` : ''}
+          ${perm('registrarMov')   ? `<button class="btn btn-xs" onclick="baixaRapida(${p.id})">Baixa</button>` : ''}
         </div></td>
       </tr>`;
     }).join('');
@@ -1435,7 +1456,7 @@
 
     const tbody = document.getElementById('tbody-movimentacoes');
     if (!lista.length) {
-      tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">↕</div><p>Nenhuma movimentação encontrada.</p></div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><div class="empty-icon">↕</div><p>Nenhuma movimentação encontrada.</p></div></td></tr>`;
       return;
     }
     tbody.innerHTML = lista.map(m => {
@@ -1451,6 +1472,7 @@
         <td class="text-mono text-sm text-muted">${m.nf || '—'}</td>
         <td><div class="flex items-center gap-8"><div class="avatar avatar-sm">${iniciais(m.registrado_por)}</div><span class="text-sm">${m.registrado_por || '—'}</span></div></td>
         <td class="text-muted text-sm">${m.obs || '—'}</td>
+        <td class="actions-cell">${perm('registrarMov') ? `<button class="btn btn-xs btn-danger" onclick="abrirModalExcluirMovimentacao(${m.id})">Excluir</button>` : '—'}</td>
       </tr>`;
     }).join('');
   }
@@ -1510,6 +1532,14 @@
     document.getElementById('delete-prod-id').value = p.id;
     document.getElementById('delete-prod-nome').textContent = p.nome;
     openModal('modal-excluir-produto');
+  }
+
+  function abrirModalExcluirMovimentacao(id) {
+    const mov = App.movimentacoes.find(x => x.id === id);
+    if (!mov) return;
+    document.getElementById('delete-mov-id').value = mov.id;
+    document.getElementById('delete-mov-produto').textContent = mov.produto_nome || 'produto';
+    openModal('modal-excluir-movimentacao');
   }
 
   async function salvarProduto() {
@@ -1600,6 +1630,57 @@
   function baixaRapida(prodId) {
     abrirModalSaida();
     document.getElementById('saida-produto').value = prodId;
+  }
+
+  async function confirmarExclusaoMovimentacao() {
+    const id = parseInt(document.getElementById('delete-mov-id').value);
+    const mov = App.movimentacoes.find(x => x.id === id);
+    if (!mov) return;
+
+    const prod = App.produtos.find(p => p.id === mov.produto_id);
+    if (!prod) {
+      toast('Produto da movimentação não encontrado.', 'error');
+      return;
+    }
+
+    const novoSaldo = mov.tipo === 'entrada'
+      ? prod.qtd_atual - mov.qtd
+      : prod.qtd_atual + mov.qtd;
+
+    if (novoSaldo < 0) {
+      toast('Não foi possível excluir: o ajuste deixaria o estoque negativo.', 'error');
+      return;
+    }
+
+    const btn = document.getElementById('btn-confirmar-exclusao-mov');
+    btn.disabled = true;
+    btn.textContent = 'Excluindo...';
+
+    const { error: errProd } = await db.from('produtos')
+      .update({ qtd_atual: novoSaldo, atualizado_em: new Date().toISOString() })
+      .eq('id', mov.produto_id);
+
+    if (errProd) {
+      btn.disabled = false;
+      btn.textContent = 'Excluir movimentação';
+      toast('Erro ao ajustar estoque: ' + errProd.message, 'error');
+      return;
+    }
+
+    const { error: errMov } = await db.from('movimentacoes').delete().eq('id', id);
+
+    btn.disabled = false;
+    btn.textContent = 'Excluir movimentação';
+
+    if (errMov) {
+      toast('Erro ao excluir movimentação: ' + errMov.message, 'error');
+      return;
+    }
+
+    closeModal('modal-excluir-movimentacao');
+    toast('Movimentação excluída com sucesso!', 'success');
+    await carregarProdutos();
+    await carregarMovimentacoes();
   }
 
   async function salvarEntrada() {
