@@ -521,6 +521,9 @@
       <button class="nav-item" data-tab="movimentacoes" onclick="switchTab('movimentacoes',this)">
         <span class="nav-icon">&harr;</span> Movimenta&ccedil;&otilde;es
       </button>
+      <button class="nav-item" data-tab="vencimentos" onclick="switchTab('vencimentos',this)">
+        <span class="nav-icon">&#9200;</span> Itens a vencer
+      </button>
       <div class="sidebar-section-label" style="margin-top:8px">Gest&atilde;o</div>
       <button class="nav-item" data-tab="usuarios" onclick="switchTab('usuarios',this)" id="nav-usuarios">
         <span class="nav-icon">&#128101;</span> Usu&aacute;rios
@@ -590,12 +593,39 @@
               <thead>
                 <tr>
                   <th>Produto</th><th>Categoria</th><th>Qtd atual</th><th>Unidade</th>
-                  <th>Qtd mínima</th><th>Status</th><th>Última entrada</th>
+                  <th>Qtd mínima</th><th>Validade</th><th>Status</th><th>Última entrada</th>
                   <th>Última saída</th><th>Cadastrado por</th><th>Ações</th>
                 </tr>
               </thead>
               <tbody id="tbody-produtos">
-                <tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text-faint)">Carregando...</td></tr>
+                <tr><td colspan="11" style="text-align:center;padding:32px;color:var(--text-faint)">Carregando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ITENS A VENCER -->
+    <section id="tab-vencimentos" class="tab-section hidden">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Itens a vencer</div>
+          <div class="page-sub">Produtos com validade nos pr&oacute;ximos 10 dias</div>
+        </div>
+      </div>
+      <div class="page-body">
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Produto</th><th>Categoria</th><th>Qtd atual</th><th>Unidade</th>
+                  <th>Validade</th><th>Dias restantes</th><th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-vencimentos">
+                <tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-faint)">Carregando...</td></tr>
               </tbody>
             </table>
           </div>
@@ -656,9 +686,9 @@
       <div class="page-body">
         <div class="card card-body" style="margin-bottom:16px">
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+            <div><span class="badge badge-gold" style="margin-bottom:6px">Administrador</span><p class="text-sm text-muted mt-4">Acesso administrativo completo com identificação destacada.</p></div>
             <div><span class="badge badge-purple" style="margin-bottom:6px">Nível 1</span><p class="text-sm text-muted mt-4">Acesso total: produtos, movimentações, usuários e relatórios.</p></div>
             <div><span class="badge badge-green" style="margin-bottom:6px">Nível 2</span><p class="text-sm text-muted mt-4">Registra entradas e saídas. Não gerencia usuários.</p></div>
-            <div><span class="badge badge-gold" style="margin-bottom:6px">Administrador</span><p class="text-sm text-muted mt-4">Acesso administrativo completo com identificação destacada.</p></div>
             <div><span class="badge badge-gray" style="margin-bottom:6px">Somente leitura</span><p class="text-sm text-muted mt-4">Consulta estoque e movimentações. Sem alterações.</p></div>
           </div>
         </div>
@@ -834,6 +864,19 @@
           <input type="number" id="prod-qtd-min" min="0" value="5" />
         </div>
       </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Data de validade</label>
+          <input type="date" id="prod-validade" />
+        </div>
+        <div class="form-group" style="justify-content:flex-end">
+          <label class="form-label">Op&ccedil;&atilde;o de validade</label>
+          <label style="display:flex;align-items:center;gap:8px;min-height:37px;color:var(--text-muted);font-size:13px">
+            <input type="checkbox" id="prod-sem-validade" onchange="toggleValidadeProduto()" />
+            Cadastrar sem data de validade
+          </label>
+        </div>
+      </div>
       <div class="form-group">
         <label class="form-label">Localização</label>
         <input type="text" id="prod-local" placeholder="Ex: Depósito sala 02, prateleira B" />
@@ -955,9 +998,9 @@
           <label class="form-label">Perfil de acesso *</label>
           <select id="user-perfil">
             <option value="">Selecione...</option>
+            <option value="administrador">Administrador</option>
             <option value="diretora">Nível 1</option>
             <option value="coordenadora">Nível 2</option>
-            <option value="administrador">Administrador</option>
             <option value="visualizacao">Somente leitura</option>
           </select>
         </div>
@@ -1022,6 +1065,28 @@
     if (p.qtd_atual === 0)              return { label: 'Zerado', cls: 'badge-red'   };
     if (p.qtd_atual < p.qtd_minima)     return { label: 'Baixo',  cls: 'badge-amber' };
     return                                     { label: 'Normal', cls: 'badge-green' };
+  }
+
+  function normalizarDataISO(val) {
+    if (!val) return '';
+    return val.includes('T') ? val.split('T')[0] : val;
+  }
+
+  function diasAteValidade(val) {
+    const iso = normalizarDataISO(val);
+    if (!iso) return null;
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const alvo = new Date(`${iso}T00:00:00`);
+    return Math.round((alvo - hoje) / 86400000);
+  }
+
+  function statusValidade(p) {
+    if (!p.validade) return { label: 'Sem validade', cls: 'badge-gray', dias: null };
+    const dias = diasAteValidade(p.validade);
+    if (dias < 0) return { label: 'Vencido', cls: 'badge-red', dias };
+    if (dias <= 10) return { label: dias === 0 ? 'Vence hoje' : 'A vencer', cls: 'badge-amber', dias };
+    return { label: 'No prazo', cls: 'badge-green', dias };
   }
 
   function perfilBadge(perfil) {
@@ -1234,6 +1299,7 @@
     if (error) { toast('Erro ao carregar produtos: ' + error.message, 'error'); return; }
     App.produtos = data || [];
     renderProdutos();
+    renderVencimentos();
   }
 
   async function carregarMovimentacoes() {
@@ -1275,17 +1341,19 @@
 
     const tbody = document.getElementById('tbody-produtos');
     if (!lista.length) {
-      tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><div class="empty-icon">🗃</div><p>Nenhum produto encontrado.</p></div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state"><div class="empty-icon">🗃</div><p>Nenhum produto encontrado.</p></div></td></tr>`;
       return;
     }
     tbody.innerHTML = lista.map(p => {
       const st = statusProduto(p);
+      const validade = statusValidade(p);
       return `<tr>
         <td class="font-semi">${p.nome}</td>
         <td><span class="badge badge-gray">${p.categoria || '—'}</span></td>
         <td class="font-semi">${p.qtd_atual}</td>
         <td class="text-muted">${p.unidade || '—'}</td>
         <td class="text-muted">${p.qtd_minima}</td>
+        <td><span class="badge ${validade.cls}">${validade.label === 'Sem validade' ? 'Sem data' : fmtData(p.validade)}</span></td>
         <td><span class="badge ${st.cls}">${st.label}</span></td>
         <td class="text-muted text-sm">${fmtData(p.ultima_entrada)}</td>
         <td class="text-muted text-sm">${fmtData(p.ultima_saida)}</td>
@@ -1294,6 +1362,35 @@
           ${perm('editarProdutos') ? `<button class="btn btn-sm" onclick="abrirModalEditarProduto(${p.id})">Editar</button>` : ''}
           ${perm('registrarMov')   ? `<button class="btn btn-sm" onclick="baixaRapida(${p.id})">Baixa</button>` : ''}
         </div></td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderVencimentos() {
+    const tbody = document.getElementById('tbody-vencimentos');
+    const lista = App.produtos
+      .filter(p => {
+        const dias = diasAteValidade(p.validade);
+        return dias !== null && dias >= 0 && dias <= 10;
+      })
+      .sort((a, b) => diasAteValidade(a.validade) - diasAteValidade(b.validade));
+
+    if (!lista.length) {
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">⏰</div><p>Nenhum item com vencimento nos próximos 10 dias.</p></div></td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = lista.map(p => {
+      const validade = statusValidade(p);
+      const diasTxt = validade.dias === 0 ? 'Hoje' : `${validade.dias} dias`;
+      return `<tr>
+        <td class="font-semi">${p.nome}</td>
+        <td><span class="badge badge-gray">${p.categoria || '—'}</span></td>
+        <td class="font-semi">${p.qtd_atual}</td>
+        <td class="text-muted">${p.unidade || '—'}</td>
+        <td class="text-muted text-sm">${fmtData(p.validade)}</td>
+        <td class="text-muted">${diasTxt}</td>
+        <td><span class="badge ${validade.cls}">${validade.label}</span></td>
       </tr>`;
     }).join('');
   }
@@ -1356,12 +1453,21 @@
   /* ══════════════════════════════════════════════════════
      PRODUTOS — CRUD
   ══════════════════════════════════════════════════════ */
+  function toggleValidadeProduto() {
+    const semValidade = document.getElementById('prod-sem-validade').checked;
+    const inputValidade = document.getElementById('prod-validade');
+    inputValidade.disabled = semValidade;
+    if (semValidade) inputValidade.value = '';
+  }
+
   function abrirModalNovoProduto() {
-    ['prod-id','prod-nome','prod-local','prod-obs'].forEach(id => document.getElementById(id).value = '');
+    ['prod-id','prod-nome','prod-local','prod-obs','prod-validade'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('prod-categoria').value = '';
     document.getElementById('prod-unidade').value   = '';
     document.getElementById('prod-qtd').value       = '0';
     document.getElementById('prod-qtd-min').value   = '5';
+    document.getElementById('prod-sem-validade').checked = false;
+    toggleValidadeProduto();
     document.getElementById('modal-produto-title').textContent = 'Novo produto';
     openModal('modal-produto');
   }
@@ -1375,6 +1481,9 @@
     document.getElementById('prod-unidade').value   = p.unidade   || '';
     document.getElementById('prod-qtd').value       = p.qtd_atual;
     document.getElementById('prod-qtd-min').value   = p.qtd_minima;
+    document.getElementById('prod-validade').value  = normalizarDataISO(p.validade);
+    document.getElementById('prod-sem-validade').checked = !p.validade;
+    toggleValidadeProduto();
     document.getElementById('prod-local').value     = p.local || '';
     document.getElementById('prod-obs').value       = p.obs   || '';
     document.getElementById('modal-produto-title').textContent = 'Editar produto';
@@ -1388,6 +1497,8 @@
     const unid   = document.getElementById('prod-unidade').value;
     const qtd    = parseInt(document.getElementById('prod-qtd').value)     || 0;
     const qtdMin = parseInt(document.getElementById('prod-qtd-min').value) || 5;
+    const semValidade = document.getElementById('prod-sem-validade').checked;
+    const validade = semValidade ? null : (document.getElementById('prod-validade').value || null);
     const local  = document.getElementById('prod-local').value.trim();
     const obs    = document.getElementById('prod-obs').value.trim();
 
@@ -1396,7 +1507,7 @@
     const btn = document.getElementById('btn-salvar-produto');
     btn.disabled = true; btn.textContent = 'Salvando...';
 
-    const payload = { nome, categoria: cat, unidade: unid, qtd_atual: qtd, qtd_minima: qtdMin, local: local || null, obs: obs || null, atualizado_em: new Date().toISOString() };
+    const payload = { nome, categoria: cat, unidade: unid, qtd_atual: qtd, qtd_minima: qtdMin, validade, local: local || null, obs: obs || null, atualizado_em: new Date().toISOString() };
     const { error } = id
       ? await db.from('produtos').update(payload).eq('id', id)
       : await db.from('produtos').insert({ ...payload, criado_por: App.usuario.nome });
@@ -1602,8 +1713,8 @@ async function salvarUsuario() {
   }
 
   function exportarEstoqueCSV() {
-    const h = ['Nome','Categoria','Qtd Atual','Unidade','Qtd Mínima','Status','Última Entrada','Última Saída','Cadastrado por'];
-    const r = App.produtos.map(p => [p.nome, p.categoria, p.qtd_atual, p.unidade, p.qtd_minima, statusProduto(p).label, fmtData(p.ultima_entrada), fmtData(p.ultima_saida), p.criado_por]);
+    const h = ['Nome','Categoria','Qtd Atual','Unidade','Qtd Mínima','Validade','Status','Última Entrada','Última Saída','Cadastrado por'];
+    const r = App.produtos.map(p => [p.nome, p.categoria, p.qtd_atual, p.unidade, p.qtd_minima, fmtData(p.validade), statusProduto(p).label, fmtData(p.ultima_entrada), fmtData(p.ultima_saida), p.criado_por]);
     downloadCSV('estoque_' + today() + '.csv', [h, ...r]);
     toast('CSV gerado!', 'success');
   }
