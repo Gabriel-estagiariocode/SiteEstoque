@@ -869,12 +869,9 @@
           <label class="form-label">Data de validade</label>
           <input type="date" id="prod-validade" />
         </div>
-        <div class="form-group" style="justify-content:flex-end">
-          <label class="form-label">Op&ccedil;&atilde;o de validade</label>
-          <label style="display:flex;align-items:center;gap:8px;min-height:37px;color:var(--text-muted);font-size:13px">
-            <input type="checkbox" id="prod-sem-validade" onchange="toggleValidadeProduto()" />
-            Cadastrar sem data de validade
-          </label>
+        <div class="form-group">
+          <label class="form-label">Observa&ccedil;&atilde;o</label>
+          <div class="info-box">Se n&atilde;o informar uma data, o item ser&aacute; salvo sem validade.</div>
         </div>
       </div>
       <div class="form-group">
@@ -971,6 +968,25 @@
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-saida')">Cancelar</button>
       <button class="btn btn-danger" id="btn-salvar-saida" onclick="salvarSaida()">Confirmar baixa</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Confirmar Exclusão de Produto -->
+<div id="modal-excluir-produto" class="modal-backdrop hidden">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3>Excluir produto</h3>
+      <button class="btn btn-icon" onclick="closeModal('modal-excluir-produto')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="delete-prod-id" />
+      <p>Tem certeza que deseja excluir o produto <span class="font-semi" id="delete-prod-nome">—</span>?</p>
+      <div class="info-box">Essa a&ccedil;&atilde;o n&atilde;o pode ser desfeita. Se houver movimenta&ccedil;&otilde;es vinculadas, a exclus&atilde;o pode ser bloqueada pelo banco.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-excluir-produto')">Cancelar</button>
+      <button class="btn btn-danger" id="btn-confirmar-exclusao-produto" onclick="confirmarExclusaoProduto()">Excluir produto</button>
     </div>
   </div>
 </div>
@@ -1072,12 +1088,20 @@
     return val.includes('T') ? val.split('T')[0] : val;
   }
 
-  function diasAteValidade(val) {
+  function parseDataLocal(val) {
     const iso = normalizarDataISO(val);
     if (!iso) return null;
+    const [y, m, d] = iso.split('-').map(Number);
+    if (!y || !m || !d) return null;
+    return new Date(y, m - 1, d);
+  }
+
+  function diasAteValidade(val) {
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
-    const alvo = new Date(`${iso}T00:00:00`);
+    const alvo = parseDataLocal(val);
+    if (!alvo) return null;
+    alvo.setHours(0, 0, 0, 0);
     return Math.round((alvo - hoje) / 86400000);
   }
 
@@ -1360,6 +1384,7 @@
         <td><div class="flex items-center gap-8"><div class="avatar avatar-sm">${iniciais(p.criado_por)}</div><span class="text-sm">${p.criado_por || '—'}</span></div></td>
         <td><div class="flex gap-8">
           ${perm('editarProdutos') ? `<button class="btn btn-sm" onclick="abrirModalEditarProduto(${p.id})">Editar</button>` : ''}
+          ${perm('editarProdutos') ? `<button class="btn btn-sm btn-danger" onclick="abrirModalExcluirProduto(${p.id})">Excluir</button>` : ''}
           ${perm('registrarMov')   ? `<button class="btn btn-sm" onclick="baixaRapida(${p.id})">Baixa</button>` : ''}
         </div></td>
       </tr>`;
@@ -1371,18 +1396,18 @@
     const lista = App.produtos
       .filter(p => {
         const dias = diasAteValidade(p.validade);
-        return dias !== null && dias >= 0 && dias <= 10;
+        return dias !== null && dias <= 10;
       })
       .sort((a, b) => diasAteValidade(a.validade) - diasAteValidade(b.validade));
 
     if (!lista.length) {
-      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">⏰</div><p>Nenhum item com vencimento nos próximos 10 dias.</p></div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">⏰</div><p>Nenhum item vencido ou com vencimento nos próximos 10 dias.</p></div></td></tr>`;
       return;
     }
 
     tbody.innerHTML = lista.map(p => {
       const validade = statusValidade(p);
-      const diasTxt = validade.dias === 0 ? 'Hoje' : `${validade.dias} dias`;
+      const diasTxt = validade.dias < 0 ? `${Math.abs(validade.dias)} dias atrasado(s)` : (validade.dias === 0 ? 'Hoje' : `${validade.dias} dias`);
       return `<tr>
         <td class="font-semi">${p.nome}</td>
         <td><span class="badge badge-gray">${p.categoria || '—'}</span></td>
@@ -1453,21 +1478,12 @@
   /* ══════════════════════════════════════════════════════
      PRODUTOS — CRUD
   ══════════════════════════════════════════════════════ */
-  function toggleValidadeProduto() {
-    const semValidade = document.getElementById('prod-sem-validade').checked;
-    const inputValidade = document.getElementById('prod-validade');
-    inputValidade.disabled = semValidade;
-    if (semValidade) inputValidade.value = '';
-  }
-
   function abrirModalNovoProduto() {
     ['prod-id','prod-nome','prod-local','prod-obs','prod-validade'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('prod-categoria').value = '';
     document.getElementById('prod-unidade').value   = '';
     document.getElementById('prod-qtd').value       = '0';
     document.getElementById('prod-qtd-min').value   = '5';
-    document.getElementById('prod-sem-validade').checked = false;
-    toggleValidadeProduto();
     document.getElementById('modal-produto-title').textContent = 'Novo produto';
     openModal('modal-produto');
   }
@@ -1482,12 +1498,18 @@
     document.getElementById('prod-qtd').value       = p.qtd_atual;
     document.getElementById('prod-qtd-min').value   = p.qtd_minima;
     document.getElementById('prod-validade').value  = normalizarDataISO(p.validade);
-    document.getElementById('prod-sem-validade').checked = !p.validade;
-    toggleValidadeProduto();
     document.getElementById('prod-local').value     = p.local || '';
     document.getElementById('prod-obs').value       = p.obs   || '';
     document.getElementById('modal-produto-title').textContent = 'Editar produto';
     openModal('modal-produto');
+  }
+
+  function abrirModalExcluirProduto(id) {
+    const p = App.produtos.find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('delete-prod-id').value = p.id;
+    document.getElementById('delete-prod-nome').textContent = p.nome;
+    openModal('modal-excluir-produto');
   }
 
   async function salvarProduto() {
@@ -1497,8 +1519,7 @@
     const unid   = document.getElementById('prod-unidade').value;
     const qtd    = parseInt(document.getElementById('prod-qtd').value)     || 0;
     const qtdMin = parseInt(document.getElementById('prod-qtd-min').value) || 5;
-    const semValidade = document.getElementById('prod-sem-validade').checked;
-    const validade = semValidade ? null : (document.getElementById('prod-validade').value || null);
+    const validade = document.getElementById('prod-validade').value || null;
     const local  = document.getElementById('prod-local').value.trim();
     const obs    = document.getElementById('prod-obs').value.trim();
 
@@ -1519,6 +1540,30 @@
     toast(id ? 'Produto atualizado!' : 'Produto cadastrado!', 'success');
     closeModal('modal-produto');
     await carregarProdutos();
+  }
+
+  async function confirmarExclusaoProduto() {
+    const id = document.getElementById('delete-prod-id').value;
+    if (!id) return;
+
+    const btn = document.getElementById('btn-confirmar-exclusao-produto');
+    btn.disabled = true;
+    btn.textContent = 'Excluindo...';
+
+    const { error } = await db.from('produtos').delete().eq('id', id);
+
+    btn.disabled = false;
+    btn.textContent = 'Excluir produto';
+
+    if (error) {
+      toast('Erro ao excluir produto: ' + error.message, 'error');
+      return;
+    }
+
+    closeModal('modal-excluir-produto');
+    toast('Produto excluído com sucesso!', 'success');
+    await carregarProdutos();
+    preencherSelectProdutos();
   }
 
   /* ══════════════════════════════════════════════════════
