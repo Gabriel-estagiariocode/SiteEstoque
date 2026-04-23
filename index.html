@@ -37,6 +37,8 @@
       --red-bg:      #FEE2E2;
       --purple:      #4C1D95;
       --purple-bg:   #EDE9FE;
+      --gold:        #B7791F;
+      --gold-bg:     #FEF3C7;
       --accent:      #2D6A4F;
       --accent-text: #FFFFFF;
       --sidebar-w:   220px;
@@ -63,6 +65,8 @@
       --red-bg:      #4C1D1D;
       --purple:      #C4B5FD;
       --purple-bg:   #312E81;
+      --gold:        #FCD34D;
+      --gold-bg:     #4A3412;
       --accent:      #4ADE80;
       --accent-text: #052E16;
       --shadow:      0 1px 3px rgba(0,0,0,.28), 0 1px 2px rgba(0,0,0,.22);
@@ -93,6 +97,7 @@
     .badge-amber  { background: var(--amber-bg);  color: var(--amber); }
     .badge-red    { background: var(--red-bg);    color: var(--red); }
     .badge-purple { background: var(--purple-bg); color: var(--purple); }
+    .badge-gold   { background: var(--gold-bg);   color: var(--gold); }
     .badge-gray   { background: var(--surface-2); color: var(--text-muted); }
 
     button { font-family: var(--font); cursor: pointer; }
@@ -650,9 +655,10 @@
       </div>
       <div class="page-body">
         <div class="card card-body" style="margin-bottom:16px">
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
-            <div><span class="badge badge-purple" style="margin-bottom:6px">Diretora</span><p class="text-sm text-muted mt-4">Acesso total: produtos, movimentações, usuários e relatórios.</p></div>
-            <div><span class="badge badge-green" style="margin-bottom:6px">Coordenadora</span><p class="text-sm text-muted mt-4">Registra entradas e saídas. Não gerencia usuários.</p></div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+            <div><span class="badge badge-purple" style="margin-bottom:6px">Nível 1</span><p class="text-sm text-muted mt-4">Acesso total: produtos, movimentações, usuários e relatórios.</p></div>
+            <div><span class="badge badge-green" style="margin-bottom:6px">Nível 2</span><p class="text-sm text-muted mt-4">Registra entradas e saídas. Não gerencia usuários.</p></div>
+            <div><span class="badge badge-gold" style="margin-bottom:6px">Administrador</span><p class="text-sm text-muted mt-4">Acesso administrativo completo com identificação destacada.</p></div>
             <div><span class="badge badge-gray" style="margin-bottom:6px">Somente leitura</span><p class="text-sm text-muted mt-4">Consulta estoque e movimentações. Sem alterações.</p></div>
           </div>
         </div>
@@ -949,8 +955,9 @@
           <label class="form-label">Perfil de acesso *</label>
           <select id="user-perfil">
             <option value="">Selecione...</option>
-            <option value="diretora">Diretora</option>
-            <option value="coordenadora">Coordenadora</option>
+            <option value="diretora">Nível 1</option>
+            <option value="coordenadora">Nível 2</option>
+            <option value="administrador">Administrador</option>
             <option value="visualizacao">Somente leitura</option>
           </select>
         </div>
@@ -994,6 +1001,7 @@
 
   /* ── Permissões ───────────────────────────────────────── */
   const PERMS = {
+    administrador: { editarProdutos: true,  registrarMov: true,  gerirUsuarios: true  },
     diretora:     { editarProdutos: true,  registrarMov: true,  gerirUsuarios: true  },
     coordenadora: { editarProdutos: false, registrarMov: true,  gerirUsuarios: false },
     visualizacao: { editarProdutos: false, registrarMov: false, gerirUsuarios: false },
@@ -1017,7 +1025,12 @@
   }
 
   function perfilBadge(perfil) {
-    return { diretora: { label:'Diretora', cls:'badge-purple' }, coordenadora: { label:'Coord.', cls:'badge-green' }, visualizacao: { label:'Leitura', cls:'badge-gray' } }[perfil] || { label: perfil, cls: 'badge-gray' };
+    return {
+      administrador: { label:'Administrador', cls:'badge-gold' },
+      diretora: { label:'Nível 1', cls:'badge-purple' },
+      coordenadora: { label:'Nível 2', cls:'badge-green' },
+      visualizacao: { label:'Somente leitura', cls:'badge-gray' }
+    }[perfil] || { label: perfil, cls: 'badge-gray' };
   }
 
   function iniciais(nome) {
@@ -1116,7 +1129,7 @@
     document.getElementById('screen-app').classList.remove('hidden');
 
     carregarTudo();
-    toast(`Bem-vinda, ${nome}!`, 'success');
+    toast(`Bem-vindo(a), ${nome}!`, 'success');
   }
 
   async function handleLogout() {
