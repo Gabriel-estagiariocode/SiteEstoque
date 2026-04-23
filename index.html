@@ -1012,6 +1012,25 @@
   </div>
 </div>
 
+<!-- Modal Confirmar Exclusão de Usuário -->
+<div id="modal-excluir-usuario" class="modal-backdrop hidden">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3>Excluir usuário</h3>
+      <button class="btn btn-icon" onclick="closeModal('modal-excluir-usuario')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="delete-user-id" />
+      <p>Tem certeza que deseja excluir o usuário <span class="font-semi" id="delete-user-nome">—</span>?</p>
+      <div class="info-box">Essa ação remove o acesso da conta e não pode ser desfeita.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-excluir-usuario')">Cancelar</button>
+      <button class="btn btn-danger" id="btn-confirmar-exclusao-usuario" onclick="confirmarExclusaoUsuario()">Excluir usuário</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Usuário -->
 <div id="modal-usuario" class="modal-backdrop hidden">
   <div class="modal">
@@ -1212,6 +1231,14 @@
 
     if (errPerfil || !perfil) {
       err.textContent = 'Perfil não encontrado. Contate o administrador.';
+      err.classList.remove('hidden');
+      await db.auth.signOut();
+      btn.disabled = false; btn.textContent = 'Entrar no sistema';
+      return;
+    }
+
+    if (perfil.ativo === false) {
+      err.textContent = 'Sua conta esta desativada. Contate o administrador.';
       err.classList.remove('hidden');
       await db.auth.signOut();
       btn.disabled = false; btn.textContent = 'Entrar no sistema';
@@ -1492,7 +1519,7 @@
         <td>${u.escola || '—'}</td>
         <td class="text-muted text-sm">${fmtData(u.criado_em)}</td>
         <td><span class="badge ${u.ativo ? 'badge-green' : 'badge-red'}">${u.ativo ? 'Ativo' : 'Inativo'}</span></td>
-        <td>${perm('gerirUsuarios') ? `<button class="btn btn-sm" onclick="toggleUsuario('${u.id}', ${u.ativo})">${u.ativo ? 'Desativar' : 'Ativar'}</button>` : '—'}</td>
+        <td class="actions-cell">${perm('gerirUsuarios') ? `<div class="flex gap-8"><button class="btn btn-xs" onclick="toggleUsuario('${u.id}', ${u.ativo})">${u.ativo ? 'Desativar' : 'Ativar'}</button><button class="btn btn-xs btn-danger" onclick="abrirModalExcluirUsuario('${u.id}')">Excluir</button></div>` : '—'}</td>
       </tr>`;
     }).join('');
   }
@@ -1540,6 +1567,14 @@
     document.getElementById('delete-mov-id').value = mov.id;
     document.getElementById('delete-mov-produto').textContent = mov.produto_nome || 'produto';
     openModal('modal-excluir-movimentacao');
+  }
+
+  function abrirModalExcluirUsuario(id) {
+    const user = App.usuarios.find(x => x.id === id);
+    if (!user) return;
+    document.getElementById('delete-user-id').value = user.id;
+    document.getElementById('delete-user-nome').textContent = user.nome || user.email || 'usuário';
+    openModal('modal-excluir-usuario');
   }
 
   async function salvarProduto() {
@@ -1826,6 +1861,33 @@ async function salvarUsuario() {
     await carregarUsuarios();
   }
 
+  async function confirmarExclusaoUsuario() {
+    const id = document.getElementById('delete-user-id').value;
+    if (!id) return;
+
+    const btn = document.getElementById('btn-confirmar-exclusao-usuario');
+    btn.disabled = true;
+    btn.textContent = 'Excluindo...';
+
+    try {
+      await chamarAdminAPI('/api/delete-user', {
+        method: 'POST',
+        body: JSON.stringify({ id })
+      });
+    } catch (error) {
+      btn.disabled = false;
+      btn.textContent = 'Excluir usuário';
+      toast('Erro ao excluir usuário: ' + error.message, 'error');
+      return;
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Excluir usuário';
+    closeModal('modal-excluir-usuario');
+    toast('Usuário excluído com sucesso!', 'success');
+    await carregarUsuarios();
+  }
+
   /* ══════════════════════════════════════════════════════
      EXPORTAR CSV
   ══════════════════════════════════════════════════════ */
@@ -1866,7 +1928,13 @@ async function salvarUsuario() {
   db.auth.getSession().then(async ({ data: { session } }) => {
     if (!session) return;
     const { data: perfil } = await db.from('perfis').select('*').eq('id', session.user.id).single();
-    if (perfil) iniciarSessao(session.user.email, perfil.nome, perfil.perfil);
+    if (!perfil) return;
+    if (perfil.ativo === false) {
+      await db.auth.signOut();
+      toast('Sua conta esta desativada. Contate o administrador.', 'error');
+      return;
+    }
+    iniciarSessao(session.user.email, perfil.nome, perfil.perfil);
   });
 
   aplicarTema(localStorage.getItem('theme-preference') || 'light');

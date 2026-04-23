@@ -15,4 +15,4 @@ Configure estas variaveis no Vercel:
 
 A rota cria o usuario com `email_confirm: true`, entao o Supabase nao precisa enviar e-mail de confirmacao para cada novo cadastro feito pelo painel.
 
-As rotas `api/list-users.js` e `api/toggle-user.js` tambem usam a service role para que apenas diretoras ativas consigam listar todos os usuarios e ativar/desativar contas pelo painel.
+As rotas `api/list-users.js`, `api/toggle-user.js` e `api/delete-user.js` tambem usam a service role para que apenas diretoras ativas consigam listar todos os usuarios, ativar/desativar contas e excluir usuarios pelo painel.
