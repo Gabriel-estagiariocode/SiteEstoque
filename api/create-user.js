@@ -39,6 +39,14 @@ async function supabaseFetch(path, options = {}) {
   return { resp, body };
 }
 
+function normalizarErroPerfil(message) {
+  const texto = String(message || '');
+  if (texto.includes('perfis_perfil_check')) {
+    return 'O banco de dados ainda nao aceita o perfil "administrador". Execute o script sql/update-perfis-perfil-check.sql no Supabase SQL Editor e tente novamente.';
+  }
+  return texto;
+}
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -154,7 +162,7 @@ module.exports = async (req, res) => {
 
   if (!perfilInsertResp.resp.ok) {
     const message = perfilInsertResp.body?.message || perfilInsertResp.body?.error || 'Usuario criado, mas nao consegui sincronizar a tabela de perfis.';
-    return json(res, 500, { error: message });
+    return json(res, 500, { error: normalizarErroPerfil(message) });
   }
 
   return json(res, 200, {

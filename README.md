@@ -16,3 +16,11 @@ Configure estas variaveis no Vercel:
 A rota cria o usuario com `email_confirm: true`, entao o Supabase nao precisa enviar e-mail de confirmacao para cada novo cadastro feito pelo painel.
 
 As rotas `api/list-users.js`, `api/toggle-user.js` e `api/delete-user.js` tambem usam a service role para que apenas diretoras ativas consigam listar todos os usuarios, ativar/desativar contas e excluir usuarios pelo painel.
+
+## Perfil administrador
+
+Se aparecer o erro `perfis_perfil_check` ao criar ou editar usuarios com perfil `administrador`, o banco ainda esta com o constraint antigo na tabela `perfis`.
+
+Execute este script no Supabase SQL Editor:
+
+- [sql/update-perfis-perfil-check.sql](/c:/Users/User/Desktop/Projects/SiteEstoque/sql/update-perfis-perfil-check.sql)

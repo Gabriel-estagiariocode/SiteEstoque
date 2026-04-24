@@ -39,6 +39,14 @@ async function supabaseFetch(path, options = {}) {
   return { resp, body };
 }
 
+function normalizarErroPerfil(message) {
+  const texto = String(message || '');
+  if (texto.includes('perfis_perfil_check')) {
+    return 'O banco de dados ainda nao aceita o perfil "administrador". Execute o script sql/update-perfis-perfil-check.sql no Supabase SQL Editor e tente novamente.';
+  }
+  return texto;
+}
+
 async function getAdminPerfil(token) {
   const userResp = await supabaseFetch('/auth/v1/user', {
     method: 'GET',
@@ -143,7 +151,7 @@ module.exports = async (req, res) => {
   if (!authUpdateResp.resp.ok) {
     const message = authUpdateResp.body?.msg || authUpdateResp.body?.message || authUpdateResp.body?.error_description || authUpdateResp.body?.error;
     return json(res, authUpdateResp.resp.status || 500, {
-      error: message || 'Falha ao atualizar usuario no Supabase Auth.'
+      error: normalizarErroPerfil(message) || 'Falha ao atualizar usuario no Supabase Auth.'
     });
   }
 
@@ -165,7 +173,7 @@ module.exports = async (req, res) => {
 
   if (!perfilUpdateResp.resp.ok) {
     const message = perfilUpdateResp.body?.message || perfilUpdateResp.body?.error || 'Falha ao sincronizar a tabela de perfis.';
-    return json(res, 500, { error: message });
+    return json(res, 500, { error: normalizarErroPerfil(message) });
   }
 
   return json(res, 200, { ok: true, user: Array.isArray(perfilUpdateResp.body) ? perfilUpdateResp.body[0] : null });
