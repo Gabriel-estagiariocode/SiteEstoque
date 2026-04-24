@@ -103,8 +103,8 @@ module.exports = async (req, res) => {
     return json(res, 403, { error: 'Seu perfil nao tem permissao para criar usuarios.' });
   }
 
-  if (perfilAtual.perfil !== 'diretora' || perfilAtual.ativo === false) {
-    return json(res, 403, { error: 'Apenas diretoras ativas podem criar usuarios.' });
+  if (!['administrador', 'diretora'].includes(perfilAtual.perfil) || perfilAtual.ativo === false) {
+    return json(res, 403, { error: 'Apenas administradores e nivel 1 ativos podem criar usuarios.' });
   }
 
   const createResp = await supabaseFetch('/auth/v1/admin/users', {

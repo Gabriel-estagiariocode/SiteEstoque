@@ -65,8 +65,8 @@ async function getAdminPerfil(token) {
     return { error: 'Seu perfil nao tem permissao para gerenciar usuarios.', status: 403 };
   }
 
-  if (perfil.perfil !== 'diretora' || perfil.ativo === false) {
-    return { error: 'Apenas diretoras ativas podem gerenciar usuarios.', status: 403 };
+  if (!['administrador', 'diretora'].includes(perfil.perfil) || perfil.ativo === false) {
+    return { error: 'Apenas administradores e nivel 1 ativos podem gerenciar usuarios.', status: 403 };
   }
 
   return { perfil, authUserId: userResp.body.id };

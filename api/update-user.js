@@ -98,8 +98,18 @@ module.exports = async (req, res) => {
   }
 
   const id = String(payload?.id || '').trim();
-  if (!id) {
-    return json(res, 400, { error: 'Informe o usuario que sera excluido.' });
+  const nome = String(payload?.nome || '').trim();
+  const email = String(payload?.email || '').trim().toLowerCase();
+  const perfil = String(payload?.perfil || '').trim();
+  const escola = String(payload?.escola || '').trim();
+  const senha = typeof payload?.senha === 'string' ? payload.senha : '';
+
+  if (!id || !nome || !email || !perfil) {
+    return json(res, 400, { error: 'Preencha todos os campos obrigatorios.' });
+  }
+
+  if (senha && senha.length < 6) {
+    return json(res, 400, { error: 'A senha deve ter no minimo 6 caracteres.' });
   }
 
   const adminCheck = await getAdminPerfil(token);
@@ -107,37 +117,56 @@ module.exports = async (req, res) => {
     return json(res, adminCheck.status, { error: adminCheck.error });
   }
 
-  if (id === adminCheck.authUserId) {
-    return json(res, 400, { error: 'Voce nao pode excluir a propria conta.' });
+  const authPayload = {
+    email,
+    user_metadata: {
+      nome,
+      perfil,
+      escola: escola || null
+    }
+  };
+
+  if (senha) {
+    authPayload.password = senha;
   }
 
-  const authDeleteResp = await supabaseFetch(`/auth/v1/admin/users/${id}`, {
-    method: 'DELETE',
+  const authUpdateResp = await supabaseFetch(`/auth/v1/admin/users/${id}`, {
+    method: 'PUT',
     headers: {
+      'Content-Type': 'application/json',
       apikey: SUPABASE_SERVICE_ROLE_KEY,
       Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
-    }
+    },
+    body: JSON.stringify(authPayload)
   });
 
-  if (!authDeleteResp.resp.ok) {
-    const message = authDeleteResp.body?.msg || authDeleteResp.body?.message || authDeleteResp.body?.error_description || authDeleteResp.body?.error;
-    return json(res, authDeleteResp.resp.status || 500, {
-      error: message || 'Falha ao excluir usuario no Supabase Auth.'
+  if (!authUpdateResp.resp.ok) {
+    const message = authUpdateResp.body?.msg || authUpdateResp.body?.message || authUpdateResp.body?.error_description || authUpdateResp.body?.error;
+    return json(res, authUpdateResp.resp.status || 500, {
+      error: message || 'Falha ao atualizar usuario no Supabase Auth.'
     });
   }
 
-  const perfilDeleteResp = await supabaseFetch(`/rest/v1/perfis?id=eq.${id}`, {
-    method: 'DELETE',
+  const perfilUpdateResp = await supabaseFetch(`/rest/v1/perfis?id=eq.${id}`, {
+    method: 'PATCH',
     headers: {
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
       apikey: SUPABASE_SERVICE_ROLE_KEY,
       Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
-    }
+    },
+    body: JSON.stringify({
+      nome,
+      email,
+      perfil,
+      escola: escola || null
+    })
   });
 
-  if (!perfilDeleteResp.resp.ok) {
-    const message = perfilDeleteResp.body?.message || perfilDeleteResp.body?.error || 'Usuario removido da autenticacao, mas nao consegui limpar a tabela de perfis.';
+  if (!perfilUpdateResp.resp.ok) {
+    const message = perfilUpdateResp.body?.message || perfilUpdateResp.body?.error || 'Falha ao sincronizar a tabela de perfis.';
     return json(res, 500, { error: message });
   }
 
-  return json(res, 200, { ok: true });
+  return json(res, 200, { ok: true, user: Array.isArray(perfilUpdateResp.body) ? perfilUpdateResp.body[0] : null });
 };

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Estoque Escolar</title>
+  <title>VeloStock</title>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -683,7 +683,7 @@
           <div class="page-title">Usuários e permissões</div>
           <div class="page-sub">Controle de acesso ao sistema</div>
         </div>
-        <button class="btn btn-primary" id="btn-novo-usuario" onclick="openModal('modal-usuario')">+ Novo usuário</button>
+        <button class="btn btn-primary" id="btn-novo-usuario" onclick="abrirModalNovoUsuario()">+ Novo usuário</button>
       </div>
       <div class="page-body">
         <div class="card card-body" style="margin-bottom:16px">
@@ -1035,10 +1035,11 @@
 <div id="modal-usuario" class="modal-backdrop hidden">
   <div class="modal">
     <div class="modal-header">
-      <h3>Novo usuário</h3>
+      <h3 id="modal-usuario-title">Novo usuário</h3>
       <button class="btn btn-icon" onclick="closeModal('modal-usuario')">✕</button>
     </div>
     <div class="modal-body">
+      <input type="hidden" id="user-id" />
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Nome completo *</label>
@@ -1066,11 +1067,11 @@
         </div>
       </div>
       <div class="form-group">
-        <label class="form-label">Senha temporária *</label>
+        <label class="form-label" id="user-senha-label">Senha temporária *</label>
         <input type="text" id="user-senha" placeholder="Mínimo 6 caracteres" />
       </div>
       <div id="user-error" class="hidden" style="font-size:12px;color:var(--red);background:var(--red-bg);padding:8px 10px;border-radius:var(--radius)"></div>
-      <div class="info-box">O usuário receberá acesso com essa senha e poderá alterá-la depois.</div>
+      <div class="info-box" id="user-info-box">O usuário receberá acesso com essa senha e poderá alterá-la depois.</div>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-usuario')">Cancelar</button>
@@ -1317,6 +1318,13 @@
     return body;
   }
 
+  async function atualizarUsuarioViaAPI(payload) {
+    return chamarAdminAPI('/api/update-user', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  }
+
   async function chamarAdminAPI(url, options = {}) {
     const { data: { session } } = await db.auth.getSession();
     if (!session?.access_token) {
@@ -1519,7 +1527,7 @@
         <td>${u.escola || '—'}</td>
         <td class="text-muted text-sm">${fmtData(u.criado_em)}</td>
         <td><span class="badge ${u.ativo ? 'badge-green' : 'badge-red'}">${u.ativo ? 'Ativo' : 'Inativo'}</span></td>
-        <td class="actions-cell">${perm('gerirUsuarios') ? `<div class="flex gap-8"><button class="btn btn-xs" onclick="toggleUsuario('${u.id}', ${u.ativo})">${u.ativo ? 'Desativar' : 'Ativar'}</button><button class="btn btn-xs btn-danger" onclick="abrirModalExcluirUsuario('${u.id}')">Excluir</button></div>` : '—'}</td>
+        <td class="actions-cell">${perm('gerirUsuarios') ? `<div class="flex gap-8"><button class="btn btn-xs" onclick="abrirModalEditarUsuario('${u.id}')">Editar</button><button class="btn btn-xs" onclick="toggleUsuario('${u.id}', ${u.ativo})">${u.ativo ? 'Desativar' : 'Ativar'}</button><button class="btn btn-xs btn-danger" onclick="abrirModalExcluirUsuario('${u.id}')">Excluir</button></div>` : '—'}</td>
       </tr>`;
     }).join('');
   }
@@ -1575,6 +1583,43 @@
     document.getElementById('delete-user-id').value = user.id;
     document.getElementById('delete-user-nome').textContent = user.nome || user.email || 'usuário';
     openModal('modal-excluir-usuario');
+  }
+
+  function limparFormularioUsuario() {
+    ['user-id','user-nome','user-email','user-escola','user-senha'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('user-perfil').value = '';
+    document.getElementById('user-error').classList.add('hidden');
+    document.getElementById('user-error').textContent = '';
+  }
+
+  function atualizarModalUsuario(modo) {
+    const editando = modo === 'editar';
+    document.getElementById('modal-usuario-title').textContent = editando ? 'Editar usuário' : 'Novo usuário';
+    document.getElementById('btn-salvar-usuario').textContent = editando ? 'Salvar alterações' : 'Criar usuário';
+    document.getElementById('user-senha-label').textContent = editando ? 'Nova senha' : 'Senha temporária *';
+    document.getElementById('user-senha').placeholder = editando ? 'Deixe em branco para manter a atual' : 'Mínimo 6 caracteres';
+    document.getElementById('user-info-box').textContent = editando
+      ? 'Atualize os dados do usuário. Se não quiser trocar a senha, deixe esse campo em branco.'
+      : 'O usuário receberá acesso com essa senha e poderá alterá-la depois.';
+  }
+
+  function abrirModalNovoUsuario() {
+    limparFormularioUsuario();
+    atualizarModalUsuario('novo');
+    openModal('modal-usuario');
+  }
+
+  function abrirModalEditarUsuario(id) {
+    const user = App.usuarios.find(x => x.id === id);
+    if (!user) return;
+    limparFormularioUsuario();
+    document.getElementById('user-id').value = user.id;
+    document.getElementById('user-nome').value = user.nome || '';
+    document.getElementById('user-email').value = user.email || '';
+    document.getElementById('user-perfil').value = user.perfil || '';
+    document.getElementById('user-escola').value = user.escola || '';
+    atualizarModalUsuario('editar');
+    openModal('modal-usuario');
   }
 
   async function salvarProduto() {
@@ -1805,47 +1850,52 @@
      USUÁRIOS
   ══════════════════════════════════════════════════════ */
 async function salvarUsuario() {
+  const id     = document.getElementById('user-id').value.trim();
   const nome   = document.getElementById('user-nome').value.trim();
   const email  = document.getElementById('user-email').value.trim().toLowerCase();
   const perfil = document.getElementById('user-perfil').value;
   const escola = document.getElementById('user-escola').value.trim();
   const senha  = document.getElementById('user-senha').value;
   const errEl  = document.getElementById('user-error');
+  const editando = !!id;
 
-  if (!nome || !email || !perfil || !senha) {
+  if (!nome || !email || !perfil || (!editando && !senha)) {
     errEl.textContent = 'Preencha todos os campos obrigatórios.';
     errEl.classList.remove('hidden'); return;
   }
-  if (senha.length < 6) {
+  if (senha && senha.length < 6) {
     errEl.textContent = 'A senha deve ter no mínimo 6 caracteres.';
     errEl.classList.remove('hidden'); return;
   }
 
   const btn = document.getElementById('btn-salvar-usuario');
-  btn.disabled = true; btn.textContent = 'Criando...';
+  btn.disabled = true; btn.textContent = editando ? 'Salvando...' : 'Criando...';
   errEl.classList.add('hidden');
 
   try {
-    await criarUsuarioViaAPI({ nome, email, perfil, escola, senha });
+    if (editando) {
+      await atualizarUsuarioViaAPI({ id, nome, email, perfil, escola, senha: senha || undefined });
+    } else {
+      await criarUsuarioViaAPI({ nome, email, perfil, escola, senha });
+    }
   } catch (error) {
     const msg = (error?.message || '').toLowerCase();
     const friendly = msg.includes('fetch')
-      ? 'Nao consegui acessar a rota de criacao. Se estiver rodando so o HTML localmente, publique no Vercel ou configure um backend para criar usuarios.'
+      ? 'Nao consegui acessar a rota de usuarios. Se estiver rodando so o HTML localmente, publique no Vercel ou configure um backend para gerenciar usuarios.'
       : error.message;
-    btn.disabled = false; btn.textContent = 'Criar usuário';
+    btn.disabled = false; btn.textContent = editando ? 'Salvar alterações' : 'Criar usuário';
     errEl.textContent = 'Erro: ' + friendly;
     errEl.classList.remove('hidden'); return;
   }
 
-  btn.disabled = false; btn.textContent = 'Criar usuário';
+  btn.disabled = false; btn.textContent = editando ? 'Salvar alterações' : 'Criar usuário';
 
-  toast(`Usuário "${nome}" criado com sucesso!`, 'success');
+  toast(editando ? `Usuário "${nome}" atualizado com sucesso!` : `Usuário "${nome}" criado com sucesso!`, 'success');
   closeModal('modal-usuario');
-  ['user-nome','user-email','user-escola','user-senha'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('user-perfil').value = '';
+  limparFormularioUsuario();
   
   // Aguarda 1 segundo para o trigger processar antes de recarregar
-  setTimeout(async () => await carregarUsuarios(), 1000);
+  setTimeout(async () => await carregarUsuarios(), editando ? 0 : 1000);
   }
 
   async function toggleUsuario(id, ativoAtual) {
