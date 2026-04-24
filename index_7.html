@@ -1266,11 +1266,11 @@
     }
 
     err.classList.add('hidden');
-    iniciarSessao(email, perfil.nome, perfil.perfil);
+    iniciarSessao(email, perfil.nome, perfil.perfil, data.user.id);
   }
 
-  function iniciarSessao(email, nome, perfil) {
-    App.usuario = { email, nome, perfil };
+  function iniciarSessao(email, nome, perfil, id) {
+    App.usuario = { email, nome, perfil, id };
 
     document.getElementById('sidebar-username').textContent = nome;
     document.getElementById('sidebar-avatar').textContent   = iniciais(nome);
@@ -1660,7 +1660,7 @@
     const payload = { nome, categoria: cat, unidade: unid, qtd_atual: qtd, qtd_minima: qtdMin, validade, local: local || null, obs: obs || null, atualizado_em: new Date().toISOString() };
     const { error } = id
       ? await db.from('produtos').update(payload).eq('id', id)
-      : await db.from('produtos').insert({ ...payload, criado_por: App.usuario.nome });
+      : await db.from('produtos').insert({ ...payload, criado_por: App.usuario.nome, user_id: App.usuario.id });
 
     btn.disabled = false; btn.textContent = 'Salvar produto';
 
@@ -2003,7 +2003,7 @@ async function salvarUsuario() {
       toast('Sua conta esta desativada. Contate o administrador.', 'error');
       return;
     }
-    iniciarSessao(session.user.email, perfil.nome, perfil.perfil);
+    iniciarSessao(session.user.email, perfil.nome, perfil.perfil, session.user.id);
   });
 
   aplicarTema(localStorage.getItem('theme-preference') || 'light');
