@@ -24,3 +24,38 @@ Se aparecer o erro `perfis_perfil_check` ao criar ou editar usuarios com perfil 
 Execute este script no Supabase SQL Editor:
 
 - [sql/update-perfis-perfil-check.sql](/c:/Users/User/Desktop/Projects/SiteEstoque/sql/update-perfis-perfil-check.sql)
+
+## Electron
+
+O projeto foi preparado para abrir como aplicativo desktop com Electron.
+
+Arquivos adicionados:
+
+- `package.json`
+- `main.js`
+- `preload.js`
+- `desktop-config.json`
+
+Antes de rodar no Electron, ajuste `desktop-config.json` com a URL publicada do backend, por exemplo:
+
+```json
+{
+  "apiBaseUrl": "https://seu-projeto.vercel.app"
+}
+```
+
+As rotas administrativas como criacao, edicao, listagem e exclusao de usuarios continuam dependendo desse backend publicado.
+
+O arquivo `desktop-config.json` foi colocado no `.gitignore` para evitar publicar configuracoes locais. Use `desktop-config.example.json` como modelo ao configurar outra maquina.
+
+Para rodar no Electron:
+
+- `npm.cmd install`
+- `npm.cmd start`
+
+Para gerar instalador Windows `.exe`:
+
+- `npm.cmd install`
+- `npm.cmd run dist`
+
+O instalador sera gerado na pasta `dist/`.

@@ -1094,6 +1094,8 @@
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxcm9nZWJqb2R3YWlveWpjcndzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NDMxNjMsImV4cCI6MjA5MTQxOTE2M30.m9VnXhQebf-U0Ivn3nkO-wSM9dweYMjLNs8tYvXB0fI'
   );
 
+  const DesktopConfig = window.VeloStockDesktop?.config || {};
+
   /* ── Estado ───────────────────────────────────────────── */
   const App = {
     usuario:       null,
@@ -1169,6 +1171,20 @@
   function iniciais(nome) {
     if (!nome) return '?';
     return nome.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  }
+
+  function getApiBaseUrl() {
+    const configured = String(DesktopConfig.apiBaseUrl || '').trim().replace(/\/+$/, '');
+    if (configured) return configured;
+    if (window.location.protocol === 'file:') {
+      throw new Error('Defina a URL do backend em desktop-config.json para usar o app desktop.');
+    }
+    return window.location.origin;
+  }
+
+  function apiUrl(path) {
+    const normalized = path.startsWith('/') ? path : `/${path}`;
+    return `${getApiBaseUrl()}${normalized}`;
   }
 
   function aplicarTema(tema) {
@@ -1298,7 +1314,7 @@
       throw new Error('Sua sessao expirou. Entre novamente para criar usuarios.');
     }
 
-    const resp = await fetch('/api/create-user', {
+    const resp = await fetch(apiUrl('/api/create-user'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1334,7 +1350,7 @@
       throw new Error('Sua sessao expirou. Entre novamente.');
     }
 
-    const resp = await fetch(url, {
+    const resp = await fetch(apiUrl(url), {
       ...options,
       headers: {
         'Content-Type': 'application/json',

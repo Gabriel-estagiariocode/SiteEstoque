@@ -1,0 +1,46 @@
+{
+  "name": "velostock",
+  "version": "1.0.0",
+  "description": "Aplicativo desktop do VeloStock",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis",
+    "pack": "electron-builder --dir"
+  },
+  "devDependencies": {
+    "electron": "^37.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.velostock.app",
+    "productName": "VeloStock",
+    "files": [
+      "index.html",
+      "main.js",
+      "preload.js",
+      "desktop-config.json",
+      "favicon.ico",
+      "favicon.svg",
+      "api/**/*",
+      "assets/**/*",
+      "sql/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "favicon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "VeloStock"
+    }
+  }
+}

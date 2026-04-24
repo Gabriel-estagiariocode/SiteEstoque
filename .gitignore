@@ -1,0 +1,6 @@
+node_modules/
+dist/
+favicon.png
+
+# Electron local config
+desktop-config.json
