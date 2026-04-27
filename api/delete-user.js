@@ -1,13 +1,13 @@
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
-
+ 
 function json(res, status, body) {
   res.statusCode = status;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.end(JSON.stringify(body));
 }
-
+ 
 async function readJson(req) {
   return new Promise((resolve, reject) => {
     let raw = '';
@@ -24,21 +24,21 @@ async function readJson(req) {
     req.on('error', reject);
   });
 }
-
+ 
 async function supabaseFetch(path, options = {}) {
   const resp = await fetch(`${SUPABASE_URL}${path}`, options);
   const text = await resp.text();
   let body = null;
-
+ 
   try {
     body = text ? JSON.parse(text) : null;
   } catch (_) {
     body = text || null;
   }
-
+ 
   return { resp, body };
 }
-
+ 
 async function getAdminPerfil(token) {
   const userResp = await supabaseFetch('/auth/v1/user', {
     method: 'GET',
@@ -47,11 +47,11 @@ async function getAdminPerfil(token) {
       Authorization: `Bearer ${token}`
     }
   });
-
+ 
   if (!userResp.resp.ok || !userResp.body?.id) {
     return { error: 'Sessao expirada ou invalida.', status: 401 };
   }
-
+ 
   const perfilResp = await supabaseFetch(`/rest/v1/perfis?select=id,perfil,ativo&id=eq.${userResp.body.id}`, {
     method: 'GET',
     headers: {
@@ -59,73 +59,59 @@ async function getAdminPerfil(token) {
       Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
     }
   });
-
+ 
   const perfil = Array.isArray(perfilResp.body) ? perfilResp.body[0] : null;
   if (!perfilResp.resp.ok || !perfil) {
     return { error: 'Seu perfil nao tem permissao para gerenciar usuarios.', status: 403 };
   }
-
+ 
   if (!['administrador', 'diretora'].includes(perfil.perfil) || perfil.ativo === false) {
     return { error: 'Apenas administradores e nivel 1 ativos podem gerenciar usuarios.', status: 403 };
   }
-
+ 
   return { perfil, authUserId: userResp.body.id };
 }
-
+ 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return json(res, 405, { error: 'Metodo nao permitido.' });
   }
-
+ 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !SUPABASE_ANON_KEY) {
     return json(res, 500, {
       error: 'Configuracao ausente no servidor. Defina SUPABASE_URL, SUPABASE_ANON_KEY e SUPABASE_SERVICE_ROLE_KEY.'
     });
   }
-
+ 
   const authHeader = req.headers.authorization || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
   if (!token) {
     return json(res, 401, { error: 'Sessao invalida.' });
   }
-
+ 
   let payload;
   try {
     payload = await readJson(req);
   } catch (_) {
     return json(res, 400, { error: 'JSON invalido.' });
   }
-
+ 
   const id = String(payload?.id || '').trim();
   if (!id) {
     return json(res, 400, { error: 'Informe o usuario que sera excluido.' });
   }
-
+ 
   const adminCheck = await getAdminPerfil(token);
   if (adminCheck.error) {
     return json(res, adminCheck.status, { error: adminCheck.error });
   }
-
+ 
   if (id === adminCheck.authUserId) {
     return json(res, 400, { error: 'Voce nao pode excluir a propria conta.' });
   }
-
-  const authDeleteResp = await supabaseFetch(`/auth/v1/admin/users/${id}`, {
-    method: 'DELETE',
-    headers: {
-      apikey: SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
-    }
-  });
-
-  if (!authDeleteResp.resp.ok) {
-    const message = authDeleteResp.body?.msg || authDeleteResp.body?.message || authDeleteResp.body?.error_description || authDeleteResp.body?.error;
-    return json(res, authDeleteResp.resp.status || 500, {
-      error: message || 'Falha ao excluir usuario no Supabase Auth.'
-    });
-  }
-
+ 
+  // PASSO 1 — Apaga de `perfis` primeiro (remove a FK perfis_id_fkey → auth.users)
   const perfilDeleteResp = await supabaseFetch(`/rest/v1/perfis?id=eq.${id}`, {
     method: 'DELETE',
     headers: {
@@ -133,11 +119,27 @@ module.exports = async (req, res) => {
       Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
     }
   });
-
+ 
   if (!perfilDeleteResp.resp.ok) {
-    const message = perfilDeleteResp.body?.message || perfilDeleteResp.body?.error || 'Usuario removido da autenticacao, mas nao consegui limpar a tabela de perfis.';
+    const message = perfilDeleteResp.body?.message || perfilDeleteResp.body?.error || 'Falha ao remover perfil do usuario.';
     return json(res, 500, { error: message });
   }
-
+ 
+  // PASSO 2 — Agora apaga do auth.users (sem violar a FK)
+  const authDeleteResp = await supabaseFetch(`/auth/v1/admin/users/${id}`, {
+    method: 'DELETE',
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+    }
+  });
+ 
+  if (!authDeleteResp.resp.ok) {
+    const message = authDeleteResp.body?.msg || authDeleteResp.body?.message || authDeleteResp.body?.error_description || authDeleteResp.body?.error;
+    return json(res, authDeleteResp.resp.status || 500, {
+      error: message || 'Perfil removido, mas falha ao excluir usuario no Supabase Auth.'
+    });
+  }
+ 
   return json(res, 200, { ok: true });
 };
