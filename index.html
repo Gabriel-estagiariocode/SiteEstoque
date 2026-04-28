@@ -593,6 +593,13 @@
         </div>
       </div>
       <div class="page-body">
+        <!-- Seletor de local (apenas admins) -->
+        <div id="setor-selector-produtos" class="hidden" style="margin-bottom:12px;display:flex;align-items:center;gap:10px">
+          <label style="font-size:13px;font-weight:500;color:var(--text-muted);white-space:nowrap">&#127970; Local:</label>
+          <select id="select-setor-produtos" onchange="mudarSetor(this.value)" style="max-width:260px">
+            <option value="todos">Todos os locais</option>
+          </select>
+        </div>
         <div class="metrics-grid">
           <div class="metric-card"><div class="metric-label">Total de itens</div><div class="metric-value" id="metric-total">—</div><div class="metric-sub">produtos cadastrados</div></div>
           <div class="metric-card"><div class="metric-label">Estoque normal</div><div class="metric-value color-green" id="metric-normal">—</div><div class="metric-sub">acima do mínimo</div></div>
@@ -672,6 +679,13 @@
         </div>
       </div>
       <div class="page-body">
+        <!-- Seletor de local (apenas admins) -->
+        <div id="setor-selector-mov" class="hidden" style="margin-bottom:12px;display:flex;align-items:center;gap:10px">
+          <label style="font-size:13px;font-weight:500;color:var(--text-muted);white-space:nowrap">&#127970; Local:</label>
+          <select id="select-setor-mov" onchange="mudarSetor(this.value)" style="max-width:260px">
+            <option value="todos">Todos os locais</option>
+          </select>
+        </div>
         <div class="toolbar">
           <input type="text" id="busca-mov" placeholder="Buscar produto ou responsável..." oninput="renderMovimentacoes()" />
           <select id="filtro-tipo-mov" onchange="renderMovimentacoes()">
@@ -1100,6 +1114,7 @@
     produtos:      [],
     movimentacoes: [],
     usuarios:      [],
+    setorAtivo:    null,
   };
 
   /* ── Permissões ───────────────────────────────────────── */
@@ -1250,11 +1265,12 @@
     }
 
     err.classList.add('hidden');
-    iniciarSessao(email, perfil.nome, perfil.perfil);
+    iniciarSessao(email, perfil.nome, perfil.perfil, perfil.escola);
   }
 
-  function iniciarSessao(email, nome, perfil) {
-    App.usuario = { email, nome, perfil };
+  function iniciarSessao(email, nome, perfil, escola) {
+    App.usuario = { email, nome, perfil, escola };
+    App.setorAtivo = perfil === 'administrador' ? 'todos' : escola;
 
     document.getElementById('sidebar-username').textContent = nome;
     document.getElementById('sidebar-avatar').textContent   = iniciais(nome);
@@ -1290,6 +1306,48 @@
     show('btn-nova-entrada', perm('registrarMov'));
     show('btn-nova-saida',   perm('registrarMov'));
     show('btn-novo-usuario', perm('gerirUsuarios'));
+    // Seletores de setor: apenas admin ve
+    const isAdmin = App.usuario?.perfil === 'administrador';
+    ['setor-selector-produtos', 'setor-selector-mov'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = isAdmin ? 'flex' : 'none';
+    });
+  }
+
+  /* ══ Seletor de Setor (Administrador) ══════════════════ */
+  async function inicializarSetores() {
+    if (App.usuario.perfil !== 'administrador') return;
+
+    // Busca todos os setores distintos cadastrados no banco
+    const { data } = await db.from('produtos').select('setor');
+    const setoresDB = [...new Set((data || []).map(p => p.setor).filter(Boolean))].sort();
+
+    // Tambem pega setores dos perfis cadastrados
+    const { data: perfisData } = await db.from('perfis').select('escola');
+    const setoresPerfis = [...new Set((perfisData || []).map(p => p.escola).filter(Boolean))].sort();
+
+    // Une os dois sem duplicatas
+    const todosSetores = [...new Set([...setoresDB, ...setoresPerfis])].sort();
+
+    const opts = '<option value="todos">Todos os locais</option>' +
+      todosSetores.map(s => `<option value="${s}">${s}</option>`).join('');
+
+    document.getElementById('select-setor-produtos').innerHTML = opts;
+    document.getElementById('select-setor-mov').innerHTML = opts;
+
+    // Exibe os seletores
+    document.getElementById('setor-selector-produtos').classList.remove('hidden');
+    document.getElementById('setor-selector-produtos').style.display = 'flex';
+    document.getElementById('setor-selector-mov').classList.remove('hidden');
+    document.getElementById('setor-selector-mov').style.display = 'flex';
+  }
+
+  async function mudarSetor(setor) {
+    App.setorAtivo = setor;
+    // Sincroniza os dois selects
+    document.getElementById('select-setor-produtos').value = setor;
+    document.getElementById('select-setor-mov').value = setor;
+    await carregarTudo();
   }
 
   async function criarUsuarioViaAPI(payload) {
@@ -1375,10 +1433,15 @@
   async function carregarTudo() {
     await carregarProdutos();
     await carregarMovimentacoes();
+    await inicializarSetores();
   }
 
   async function carregarProdutos() {
-    const { data, error } = await db.from('produtos').select('*').order('nome');
+    let query = db.from('produtos').select('*').order('nome');
+    if (App.setorAtivo && App.setorAtivo !== 'todos') {
+      query = query.eq('setor', App.setorAtivo);
+    }
+    const { data, error } = await query;
     if (error) { toast('Erro ao carregar produtos: ' + error.message, 'error'); return; }
     App.produtos = data || [];
     renderProdutos();
@@ -1386,7 +1449,11 @@
   }
 
   async function carregarMovimentacoes() {
-    const { data, error } = await db.from('movimentacoes').select('*').order('criado_em', { ascending: false });
+    let query = db.from('movimentacoes').select('*').order('criado_em', { ascending: false });
+    if (App.setorAtivo && App.setorAtivo !== 'todos') {
+      query = query.eq('setor', App.setorAtivo);
+    }
+    const { data, error } = await query;
     if (error) { toast('Erro ao carregar movimentações: ' + error.message, 'error'); return; }
     App.movimentacoes = data || [];
     renderMovimentacoes();
@@ -1644,7 +1711,7 @@
     const payload = { nome, categoria: cat, unidade: unid, qtd_atual: qtd, qtd_minima: qtdMin, validade, local: local || null, obs: obs || null, atualizado_em: new Date().toISOString() };
     const { error } = id
       ? await db.from('produtos').update(payload).eq('id', id)
-      : await db.from('produtos').insert({ ...payload, criado_por: App.usuario.nome });
+      : await db.from('produtos').insert({ ...payload, criado_por: App.usuario.nome, setor: App.usuario.escola });
 
     btn.disabled = false; btn.textContent = 'Salvar produto';
 
@@ -1786,6 +1853,7 @@
       produto_id: prodId, produto_nome: prod.nome, tipo: 'entrada',
       qtd, unidade: prod.unidade, destino_origem: fornec || 'Não informado',
       nf: nf || null, registrado_por: App.usuario.nome, data_mov: data, obs: obs || null,
+      setor: App.usuario.escola,
     });
 
     if (errMov) {
@@ -1829,6 +1897,7 @@
       produto_id: prodId, produto_nome: prod.nome, tipo: 'saida',
       qtd, unidade: prod.unidade, destino_origem: destino,
       nf: null, registrado_por: App.usuario.nome, data_mov: data, obs: obs || null,
+      setor: App.usuario.escola,
     });
 
     if (errMov) {
@@ -1987,7 +2056,7 @@ async function salvarUsuario() {
       toast('Sua conta esta desativada. Contate o administrador.', 'error');
       return;
     }
-    iniciarSessao(session.user.email, perfil.nome, perfil.perfil);
+    iniciarSessao(session.user.email, perfil.nome, perfil.perfil, perfil.escola);
   });
 
   aplicarTema(localStorage.getItem('theme-preference') || 'light');
