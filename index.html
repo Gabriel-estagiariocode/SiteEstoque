@@ -1318,11 +1318,11 @@
   async function inicializarSetores() {
     if (App.usuario.perfil !== 'administrador') return;
 
-    // Busca todos os setores distintos cadastrados no banco
+    // Busca setores distintos dos produtos (ignora 'geral' que e apenas o default do banco)
     const { data } = await db.from('produtos').select('setor');
-    const setoresDB = [...new Set((data || []).map(p => p.setor).filter(Boolean))].sort();
+    const setoresDB = [...new Set((data || []).map(p => p.setor).filter(s => s && s !== 'geral'))].sort();
 
-    // Tambem pega setores dos perfis cadastrados
+    // Pega setores dos perfis cadastrados (ignora vazios)
     const { data: perfisData } = await db.from('perfis').select('escola');
     const setoresPerfis = [...new Set((perfisData || []).map(p => p.escola).filter(Boolean))].sort();
 
@@ -1335,7 +1335,7 @@
     document.getElementById('select-setor-produtos').innerHTML = opts;
     document.getElementById('select-setor-mov').innerHTML = opts;
 
-    // Restaura o setor selecionado apos reconstruir o innerHTML
+    // Restaura o valor selecionado apos reconstruir o innerHTML
     const valorAtivo = App.setorAtivo || 'todos';
     document.getElementById('select-setor-produtos').value = valorAtivo;
     document.getElementById('select-setor-mov').value = valorAtivo;
@@ -1352,7 +1352,7 @@
     // Sincroniza os dois selects sem reinicializar as opcoes
     document.getElementById('select-setor-produtos').value = setor;
     document.getElementById('select-setor-mov').value = setor;
-    // Recarrega apenas os dados, sem chamar inicializarSetores novamente
+    // Recarrega apenas os dados (nao chama inicializarSetores para nao resetar o select)
     await carregarProdutos();
     await carregarMovimentacoes();
   }
@@ -1445,8 +1445,11 @@
 
   async function carregarProdutos() {
     let query = db.from('produtos').select('*').order('nome');
+    // 'todos' = sem filtro (admin ve tudo); null = usuario nao-admin usa escola propria
     if (App.setorAtivo && App.setorAtivo !== 'todos') {
       query = query.eq('setor', App.setorAtivo);
+    } else if (!App.setorAtivo && App.usuario?.escola) {
+      query = query.eq('setor', App.usuario.escola);
     }
     const { data, error } = await query;
     if (error) { toast('Erro ao carregar produtos: ' + error.message, 'error'); return; }
@@ -1457,8 +1460,11 @@
 
   async function carregarMovimentacoes() {
     let query = db.from('movimentacoes').select('*').order('criado_em', { ascending: false });
+    // 'todos' = sem filtro (admin ve tudo); null = usuario nao-admin usa escola propria
     if (App.setorAtivo && App.setorAtivo !== 'todos') {
       query = query.eq('setor', App.setorAtivo);
+    } else if (!App.setorAtivo && App.usuario?.escola) {
+      query = query.eq('setor', App.usuario.escola);
     }
     const { data, error } = await query;
     if (error) { toast('Erro ao carregar movimentações: ' + error.message, 'error'); return; }
