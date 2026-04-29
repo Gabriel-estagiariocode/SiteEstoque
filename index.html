@@ -595,7 +595,7 @@
       <div class="page-body">
         <!-- Seletor de local (apenas admins) -->
         <div id="setor-selector-produtos" class="hidden" style="margin-bottom:12px;display:flex;align-items:center;gap:10px">
-          <label style="font-size:13px;font-weight:500;color:var(--text-muted);white-space:nowrap">&#127970; Local:</label>
+          <label style="font-size:13px;font-weight:500;color:var(--text-muted);white-space:nowrap">&#127968; Local:</label>
           <select id="select-setor-produtos" onchange="mudarSetor(this.value)" style="max-width:260px">
             <option value="todos">Todos os locais</option>
           </select>
@@ -681,7 +681,7 @@
       <div class="page-body">
         <!-- Seletor de local (apenas admins) -->
         <div id="setor-selector-mov" class="hidden" style="margin-bottom:12px;display:flex;align-items:center;gap:10px">
-          <label style="font-size:13px;font-weight:500;color:var(--text-muted);white-space:nowrap">&#127970; Local:</label>
+          <label style="font-size:13px;font-weight:500;color:var(--text-muted);white-space:nowrap">&#127968; Local:</label>
           <select id="select-setor-mov" onchange="mudarSetor(this.value)" style="max-width:260px">
             <option value="todos">Todos os locais</option>
           </select>
@@ -1595,6 +1595,22 @@
     }).join('');
   }
 
+  // Hierarquia de perfis: quanto menor o numero, maior o nivel
+  const HIERARQUIA = { administrador: 0, diretora: 1, coordenadora: 2, visualizacao: 3 };
+
+  function podeGerirUsuario(usuarioAlvo) {
+    const meuPerfil  = App.usuario?.perfil;
+    const meuNivel   = HIERARQUIA[meuPerfil] ?? 99;
+    const nivelAlvo  = HIERARQUIA[usuarioAlvo.perfil] ?? 99;
+    // Administrador pode gerir todos
+    if (meuPerfil === 'administrador') return true;
+    // Diretora (nivel 1) so pode gerir perfis abaixo dela (nivel 2+)
+    // Nao pode gerir outros diretores nem administradores
+    if (meuPerfil === 'diretora') return nivelAlvo > 1;
+    // Demais perfis nao podem gerir ninguem
+    return false;
+  }
+
   function renderUsuarios() {
     const tbody = document.getElementById('tbody-usuarios');
     if (!App.usuarios.length) {
@@ -1610,7 +1626,7 @@
         <td>${u.escola || '—'}</td>
         <td class="text-muted text-sm">${fmtData(u.criado_em)}</td>
         <td><span class="badge ${u.ativo ? 'badge-green' : 'badge-red'}">${u.ativo ? 'Ativo' : 'Inativo'}</span></td>
-        <td class="actions-cell">${perm('gerirUsuarios') ? `<div class="flex gap-8"><button class="btn btn-xs" onclick="abrirModalEditarUsuario('${u.id}')">Editar</button><button class="btn btn-xs" onclick="toggleUsuario('${u.id}', ${u.ativo})">${u.ativo ? 'Desativar' : 'Ativar'}</button><button class="btn btn-xs btn-danger" onclick="abrirModalExcluirUsuario('${u.id}')">Excluir</button></div>` : '—'}</td>
+        <td class="actions-cell">${podeGerirUsuario(u) ? `<div class="flex gap-8"><button class="btn btn-xs" onclick="abrirModalEditarUsuario('${u.id}')">Editar</button><button class="btn btn-xs" onclick="toggleUsuario('${u.id}', ${u.ativo})">${u.ativo ? 'Desativar' : 'Ativar'}</button><button class="btn btn-xs btn-danger" onclick="abrirModalExcluirUsuario('${u.id}')">Excluir</button></div>` : '—'}</td>
       </tr>`;
     }).join('');
   }
