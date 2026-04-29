@@ -1335,6 +1335,11 @@
     document.getElementById('select-setor-produtos').innerHTML = opts;
     document.getElementById('select-setor-mov').innerHTML = opts;
 
+    // Restaura o setor selecionado apos reconstruir o innerHTML
+    const valorAtivo = App.setorAtivo || 'todos';
+    document.getElementById('select-setor-produtos').value = valorAtivo;
+    document.getElementById('select-setor-mov').value = valorAtivo;
+
     // Exibe os seletores
     document.getElementById('setor-selector-produtos').classList.remove('hidden');
     document.getElementById('setor-selector-produtos').style.display = 'flex';
@@ -1344,10 +1349,12 @@
 
   async function mudarSetor(setor) {
     App.setorAtivo = setor;
-    // Sincroniza os dois selects
+    // Sincroniza os dois selects sem reinicializar as opcoes
     document.getElementById('select-setor-produtos').value = setor;
     document.getElementById('select-setor-mov').value = setor;
-    await carregarTudo();
+    // Recarrega apenas os dados, sem chamar inicializarSetores novamente
+    await carregarProdutos();
+    await carregarMovimentacoes();
   }
 
   async function criarUsuarioViaAPI(payload) {
