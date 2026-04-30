@@ -1526,32 +1526,13 @@
   async function inicializarSetores() {
     if (App.usuario.perfil !== 'administrador') return;
 
-    const normalizarSetor = valor => String(valor || '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, '');
-
-    // Busca setores distintos dos produtos (ignora 'geral' que e apenas o default do banco)
+    // Usa apenas os setores realmente presentes nos produtos cadastrados
     const { data } = await db.from('produtos').select('setor');
-    const setoresDB = [...new Set((data || []).map(p => p.setor).filter(s => s && s !== 'geral'))].sort();
-
-    // Pega setores dos perfis cadastrados (ignora vazios)
-    const { data: perfisData } = await db.from('perfis').select('escola');
-    const setoresPerfis = [...new Set((perfisData || []).map(p => p.escola).filter(Boolean))].sort();
-
-    // Prioriza a forma cadastrada nos produtos e colapsa variacoes como "T.I." e "TI"
-    const mapaSetores = new Map();
-    [...setoresDB, ...setoresPerfis].forEach(setor => {
-      const nome = String(setor || '').trim();
-      if (!nome) return;
-      const chave = normalizarSetor(nome);
-      if (!chave) return;
-      if (!mapaSetores.has(chave) || setoresDB.includes(nome)) {
-        mapaSetores.set(chave, nome);
-      }
-    });
-    const todosSetores = [...mapaSetores.values()].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    const todosSetores = [...new Set(
+      (data || [])
+        .map(p => String(p.setor || '').trim())
+        .filter(s => s && s.toLowerCase() !== 'geral')
+    )].sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
     const opts = '<option value="todos">Todos os locais</option>' +
       todosSetores.map(s => `<option value="${s}">${s}</option>`).join('');
