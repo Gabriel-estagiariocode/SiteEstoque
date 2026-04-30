@@ -520,18 +520,43 @@
   #painel-reset { display: none; margin-top: 12px; }
   .reset-step { display: none; }
   .reset-step.ativo { display: block; }
-  .reset-codigo-inputs { display: flex; gap: 8px; justify-content: center; margin: 16px 0; }
+  .reset-codigo-inputs {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
+    margin: 16px 0;
+    width: 100%;
+  }
   .reset-codigo-inputs input {
-    width: 44px; height: 52px; text-align: center; font-size: 22px;
+    width: 100%; min-width: 0; height: 50px; text-align: center; font-size: 20px;
     font-weight: 700; border: 2px solid var(--border); border-radius: var(--radius);
-    background: var(--input-bg); color: var(--text); transition: border-color 0.15s;
+    background: var(--surface); color: var(--text); transition: border-color 0.15s;
   }
   .reset-codigo-inputs input:focus { border-color: var(--green); outline: none; }
   .reset-msg { font-size: 12px; text-align: center; margin-top: 8px; min-height: 18px; }
   .reset-msg.erro { color: var(--red); }
   .reset-msg.ok   { color: var(--green); }
+  .captcha-modal { max-width: 420px; }
+  .captcha-box {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    overflow-x: auto;
+    padding: 4px 0;
+  }
+  .captcha-box .g-recaptcha { min-width: 304px; }
+  .password-tab-shell { max-width: 560px; }
+  .password-tab-shell .info-panel { margin-top: 0; }
+  @media (max-width: 480px) {
+    .reset-codigo-inputs { gap: 6px; }
+    .reset-codigo-inputs input {
+      height: 46px;
+      font-size: 18px;
+      padding: 0;
+    }
+  }
 </style>
-  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+  <script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaApiLoad&render=explicit" async defer></script>
 </head>
 <body>
 
@@ -559,8 +584,6 @@
         </div>
       </div>
       <div id="login-error" class="hidden" style="font-size:12px;color:var(--red);background:var(--red-bg);padding:8px 10px;border-radius:var(--radius)"></div>
-      <!-- reCAPTCHA -->
-      <div class="g-recaptcha" data-sitekey="6LfBFtIsAAAAAAO3pz90sd3q8rcuUsxDxgcD2ciS" style="transform:scale(0.87);transform-origin:0 0;margin-bottom:-8px"></div>
       <button class="btn btn-primary w-full" id="btn-login" style="justify-content:center;margin-top:4px" onclick="handleLogin()">
         Entrar no sistema
       </button>
@@ -593,8 +616,6 @@
           <input type="text" maxlength="1" id="rc3" oninput="avancaCodigo(this,3)" />
           <input type="text" maxlength="1" id="rc4" oninput="avancaCodigo(this,4)" />
           <input type="text" maxlength="1" id="rc5" oninput="avancaCodigo(this,5)" />
-          <input type="text" maxlength="1" id="rc6" oninput="avancaCodigo(this,6)" />
-          <input type="text" maxlength="1" id="rc7" oninput="avancaCodigo(this,7)" />
         </div>
         <div id="reset-msg2" class="reset-msg"></div>
         <div style="display:flex;gap:8px;margin-top:10px">
@@ -619,6 +640,26 @@
 
     <hr class="login-divider" />
     <p class="text-sm text-faint" style="text-align:center">Vers&atilde;o 0.2 &middot; Supabase integrado</p>
+  </div>
+</div>
+
+<div id="modal-captcha" class="modal-backdrop hidden">
+  <div class="modal captcha-modal">
+    <div class="modal-header">
+      <h3>Confirmar acesso</h3>
+      <button class="btn btn-icon" type="button" onclick="cancelarCaptcha()">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <p class="text-muted">Confirme o captcha para continuar com o login.</p>
+      <div class="captcha-box">
+        <div id="login-captcha-widget"></div>
+      </div>
+      <div id="captcha-error" class="hidden" style="font-size:12px;color:var(--red);background:var(--red-bg);padding:8px 10px;border-radius:var(--radius)"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" type="button" onclick="cancelarCaptcha()">Cancelar</button>
+      <button class="btn btn-primary" type="button" id="btn-confirmar-captcha" onclick="confirmarCaptchaELogin()">Continuar</button>
+    </div>
   </div>
 </div>
 
@@ -652,8 +693,11 @@
       <button class="nav-item" data-tab="relatorios" onclick="switchTab('relatorios',this)">
         <span class="nav-icon">&#128202;</span> Relat&oacute;rios
       </button>
-            <button class="nav-item" data-tab="informacoes" onclick="switchTab('informacoes',this)">
+      <button class="nav-item" data-tab="informacoes" onclick="switchTab('informacoes',this)">
         <span class="nav-icon">i</span> Informa&ccedil;&otilde;es
+      </button>
+      <button class="nav-item" data-tab="redefinicao-senha" onclick="switchTab('redefinicao-senha',this)">
+        <span class="nav-icon">&#128274;</span> Redefini&ccedil;&atilde;o de senha
       </button>
     </nav>
     <div class="sidebar-footer">
@@ -925,35 +969,46 @@
           </div>
         </div>
 
-        <!-- Card Alterar Senha -->
-        <div class="info-panel" style="margin-top:24px;max-width:480px">
-          <h4>🔒 Alterar senha</h4>
-          <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Para alterar sua senha, informe a senha atual e depois a nova senha duas vezes.</p>
-          <div class="form-group">
-            <label class="form-label">Senha atual</label>
-            <div class="input-senha-wrap">
-              <input type="password" id="alterar-senha-atual" placeholder="Sua senha atual" />
-              <button type="button" class="btn-toggle-senha" onclick="toggleSenha('alterar-senha-atual', this)" tabindex="-1"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Nova senha</label>
-            <div class="input-senha-wrap">
-              <input type="password" id="alterar-senha-nova" placeholder="Mínimo 6 caracteres" />
-              <button type="button" class="btn-toggle-senha" onclick="toggleSenha('alterar-senha-nova', this)" tabindex="-1"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Confirmar nova senha</label>
-            <div class="input-senha-wrap">
-              <input type="password" id="alterar-senha-confirmar" placeholder="Repita a nova senha" />
-              <button type="button" class="btn-toggle-senha" onclick="toggleSenha('alterar-senha-confirmar', this)" tabindex="-1"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
-            </div>
-          </div>
-          <div id="alterar-senha-msg" style="font-size:12px;min-height:18px;margin-bottom:8px"></div>
-          <button class="btn btn-primary" id="btn-alterar-senha" onclick="alterarSenha()" style="width:100%;justify-content:center">Salvar nova senha</button>
-        </div>
+      </div>
+    </section>
 
+    <section id="tab-redefinicao-senha" class="tab-section hidden">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Redefini&ccedil;&atilde;o de senha</div>
+          <div class="page-sub">Atualize sua senha de acesso com confirma&ccedil;&atilde;o da senha atual</div>
+        </div>
+      </div>
+      <div class="page-body">
+        <div class="password-tab-shell">
+          <div class="info-panel">
+            <h4>Alterar senha</h4>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Informe sua senha atual e depois defina a nova senha com 6 ou mais caracteres.</p>
+            <div class="form-group">
+              <label class="form-label">Senha atual</label>
+              <div class="input-senha-wrap">
+                <input type="password" id="alterar-senha-atual" placeholder="Sua senha atual" />
+                <button type="button" class="btn-toggle-senha" onclick="toggleSenha('alterar-senha-atual', this)" tabindex="-1"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nova senha</label>
+              <div class="input-senha-wrap">
+                <input type="password" id="alterar-senha-nova" placeholder="Mínimo 6 caracteres" />
+                <button type="button" class="btn-toggle-senha" onclick="toggleSenha('alterar-senha-nova', this)" tabindex="-1"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Confirmar nova senha</label>
+              <div class="input-senha-wrap">
+                <input type="password" id="alterar-senha-confirmar" placeholder="Repita a nova senha" />
+                <button type="button" class="btn-toggle-senha" onclick="toggleSenha('alterar-senha-confirmar', this)" tabindex="-1"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+              </div>
+            </div>
+            <div id="alterar-senha-msg" style="font-size:12px;min-height:18px;margin-bottom:8px"></div>
+            <button class="btn btn-primary" id="btn-alterar-senha" onclick="alterarSenha()" style="width:100%;justify-content:center">Salvar nova senha</button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -1346,13 +1401,20 @@
   function openModal(id)  { document.getElementById(id).classList.remove('hidden'); }
   function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
   document.querySelectorAll('.modal-backdrop').forEach(bd => {
-    bd.addEventListener('click', e => { if (e.target === bd) bd.classList.add('hidden'); });
+    bd.addEventListener('click', e => {
+      if (e.target !== bd) return;
+      if (bd.id === 'modal-captcha') {
+        cancelarCaptcha();
+        return;
+      }
+      bd.classList.add('hidden');
+    });
   });
 
   /* ══════════════════════════════════════════════════════
      AUTENTICAÇÃO
   ══════════════════════════════════════════════════════ */
-  async function handleLogin() {
+  async function handleLogin(captchaConfirmado = false) {
     const email = document.getElementById('login-email').value.trim().toLowerCase();
     const senha = document.getElementById('login-pass').value;
     const err   = document.getElementById('login-error');
@@ -1360,15 +1422,24 @@
 
     if (!email || !senha) { err.textContent = 'Preencha e-mail e senha.'; err.classList.remove('hidden'); return; }
 
-    // Verifica reCAPTCHA
-    const captchaToken = typeof grecaptcha !== 'undefined' ? grecaptcha.getResponse() : '';
+    if (!captchaConfirmado) {
+      err.classList.add('hidden');
+      abrirCaptchaModal();
+      return;
+    }
+
+    const captchaToken = captchaWidgetId !== null && typeof grecaptcha !== 'undefined'
+      ? grecaptcha.getResponse(captchaWidgetId)
+      : '';
     if (!captchaToken) {
-      err.textContent = 'Confirme que você não é um robô antes de continuar.';
+      err.textContent = 'A validação do captcha foi cancelada. Clique em entrar novamente.';
       err.classList.remove('hidden');
+      fecharCaptchaModal(true);
       return;
     }
 
     btn.disabled = true; btn.textContent = 'Entrando...';
+    fecharCaptchaModal(false);
 
     const { data, error } = await db.auth.signInWithPassword({ email, password: senha });
 
@@ -1376,7 +1447,7 @@
       err.textContent = 'E-mail ou senha incorretos.';
       err.classList.remove('hidden');
       btn.disabled = false; btn.textContent = 'Entrar no sistema';
-      if (typeof grecaptcha !== 'undefined') grecaptcha.reset();
+      if (captchaWidgetId !== null && typeof grecaptcha !== 'undefined') grecaptcha.reset(captchaWidgetId);
       return;
     }
 
@@ -1387,6 +1458,7 @@
       err.classList.remove('hidden');
       await db.auth.signOut();
       btn.disabled = false; btn.textContent = 'Entrar no sistema';
+      if (captchaWidgetId !== null && typeof grecaptcha !== 'undefined') grecaptcha.reset(captchaWidgetId);
       return;
     }
 
@@ -1395,10 +1467,12 @@
       err.classList.remove('hidden');
       await db.auth.signOut();
       btn.disabled = false; btn.textContent = 'Entrar no sistema';
+      if (captchaWidgetId !== null && typeof grecaptcha !== 'undefined') grecaptcha.reset(captchaWidgetId);
       return;
     }
 
     err.classList.add('hidden');
+    if (captchaWidgetId !== null && typeof grecaptcha !== 'undefined') grecaptcha.reset(captchaWidgetId);
     iniciarSessao(email, perfil.nome, perfil.perfil, perfil.escola);
   }
 
@@ -2272,12 +2346,68 @@ async function salvarUsuario() {
   /* Toggle senha */
   const SVG_EYE_OPEN   = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
   const SVG_EYE_CLOSED = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+  const RECAPTCHA_SITE_KEY = '6LfBFtIsAAAAAAO3pz90sd3q8rcuUsxDxgcD2ciS';
+  let captchaWidgetId = null;
 
   function toggleSenha(inputId, btn) {
     const inp = document.getElementById(inputId);
     const mostrar = inp.type === 'password';
     inp.type = mostrar ? 'text' : 'password';
     btn.innerHTML = mostrar ? SVG_EYE_CLOSED : SVG_EYE_OPEN;
+  }
+
+  function onRecaptchaApiLoad() {
+    renderCaptchaWidget();
+  }
+
+  function renderCaptchaWidget() {
+    if (captchaWidgetId !== null || typeof grecaptcha === 'undefined') return;
+    const host = document.getElementById('login-captcha-widget');
+    if (!host) return;
+    captchaWidgetId = grecaptcha.render(host, { sitekey: RECAPTCHA_SITE_KEY });
+  }
+
+  function limparErroCaptcha() {
+    const err = document.getElementById('captcha-error');
+    if (!err) return;
+    err.textContent = '';
+    err.classList.add('hidden');
+  }
+
+  function abrirCaptchaModal() {
+    renderCaptchaWidget();
+    limparErroCaptcha();
+    document.getElementById('modal-captcha').classList.remove('hidden');
+  }
+
+  function fecharCaptchaModal(reset = true) {
+    document.getElementById('modal-captcha').classList.add('hidden');
+    limparErroCaptcha();
+    if (reset && captchaWidgetId !== null && typeof grecaptcha !== 'undefined') {
+      grecaptcha.reset(captchaWidgetId);
+    }
+  }
+
+  function cancelarCaptcha() {
+    const err = document.getElementById('login-error');
+    err.textContent = 'A validação do captcha foi cancelada. Clique em entrar novamente.';
+    err.classList.remove('hidden');
+    fecharCaptchaModal(true);
+  }
+
+  async function confirmarCaptchaELogin() {
+    const err = document.getElementById('captcha-error');
+    const token = captchaWidgetId !== null && typeof grecaptcha !== 'undefined'
+      ? grecaptcha.getResponse(captchaWidgetId)
+      : '';
+
+    if (!token) {
+      err.textContent = 'Confirme que você não é um robô antes de continuar.';
+      err.classList.remove('hidden');
+      return;
+    }
+
+    await handleLogin(true);
   }
 
   /* Recuperar senha */
@@ -2302,7 +2432,7 @@ async function salvarUsuario() {
 
   function avancaCodigo(inp, idx) {
     inp.value = inp.value.replace(/[^0-9]/g, '');
-    if (inp.value && idx < 7) document.getElementById('rc' + (idx + 1)).focus();
+    if (inp.value && idx < 5) document.getElementById('rc' + (idx + 1)).focus();
   }
 
   async function enviarCodigoReset() {
@@ -2324,10 +2454,10 @@ async function salvarUsuario() {
 
   async function verificarCodigoReset() {
     const email  = document.getElementById('reset-email').value.trim().toLowerCase();
-    const token  = [0,1,2,3,4,5,6,7].map(i => document.getElementById('rc'+i).value).join('');
+    const token  = [0,1,2,3,4,5].map(i => document.getElementById('rc'+i).value).join('');
     const msg    = document.getElementById('reset-msg2');
     const btn    = document.getElementById('btn-verificar-codigo');
-    if (token.length < 8) { msg.textContent = 'Digite os 8 dígitos.'; msg.className = 'reset-msg erro'; return; }
+    if (token.length < 6) { msg.textContent = 'Digite os 6 dígitos.'; msg.className = 'reset-msg erro'; return; }
     btn.disabled = true; btn.textContent = 'Verificando...';
     const { error } = await db.auth.verifyOtp({ email, token, type: 'email' });
     btn.disabled = false; btn.textContent = 'Verificar';
