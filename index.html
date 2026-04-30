@@ -2457,10 +2457,10 @@ async function salvarUsuario() {
     const btn   = document.getElementById('btn-enviar-codigo');
     if (!email) { msg.textContent = 'Digite seu e-mail.'; msg.className = 'reset-msg erro'; return; }
     btn.disabled = true; btn.textContent = 'Enviando...';
-    const { error } = await db.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
+    const { error } = await db.auth.resetPasswordForEmail(email);
     btn.disabled = false; btn.textContent = 'Enviar código';
     if (error) {
-      msg.textContent = 'E-mail não encontrado ou erro ao enviar.';
+      msg.textContent = 'Erro ao enviar código: ' + error.message;
       msg.className = 'reset-msg erro';
       return;
     }
@@ -2475,7 +2475,7 @@ async function salvarUsuario() {
     const btn    = document.getElementById('btn-verificar-codigo');
     if (token.length < 6) { msg.textContent = 'Digite os 6 dígitos.'; msg.className = 'reset-msg erro'; return; }
     btn.disabled = true; btn.textContent = 'Verificando...';
-    const { error } = await db.auth.verifyOtp({ email, token, type: 'email' });
+    const { error } = await db.auth.verifyOtp({ email, token, type: 'recovery' });
     btn.disabled = false; btn.textContent = 'Verificar';
     if (error) {
       msg.textContent = 'Código inválido ou expirado. Tente novamente.';
