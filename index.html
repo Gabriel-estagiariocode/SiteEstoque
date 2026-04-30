@@ -1639,11 +1639,16 @@
 
   function renderUsuarios() {
     const tbody = document.getElementById('tbody-usuarios');
-    if (!App.usuarios.length) {
+    // Nivel 1 (diretora) so ve usuarios do mesmo setor; adm ve todos
+    const lista = App.usuarios.filter(u => {
+      if (App.usuario.perfil === 'administrador') return true;
+      return u.escola === App.usuario.escola;
+    });
+    if (!lista.length) {
       tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">👥</div><p>Nenhum usuário cadastrado.</p></div></td></tr>`;
       return;
     }
-    tbody.innerHTML = App.usuarios.map(u => {
+    tbody.innerHTML = lista.map(u => {
       const pb = perfilBadge(u.perfil);
       return `<tr>
         <td><div class="flex items-center gap-8"><div class="avatar">${iniciais(u.nome)}</div><span class="font-semi">${u.nome}</span></div></td>
@@ -1728,9 +1733,32 @@
       : 'O usuário receberá acesso com essa senha e poderá alterá-la depois.';
   }
 
+  function filtrarOpcoesPerfilModal() {
+    const sel = document.getElementById('user-perfil');
+    const meuPerfil = App.usuario?.perfil;
+    // Remove todas as opcoes e reinsere apenas as permitidas
+    sel.innerHTML = '';
+    const todasOpcoes = [
+      { value: 'administrador', label: 'Administrador' },
+      { value: 'diretora',      label: 'Nível 1'        },
+      { value: 'coordenadora',  label: 'Nível 2'        },
+      { value: 'visualizacao',  label: 'Somente leitura'},
+    ];
+    todasOpcoes.forEach(op => {
+      // Nivel 1 (diretora) so pode criar nivel abaixo (coordenadora e visualizacao)
+      if (meuPerfil === 'diretora' && (op.value === 'administrador' || op.value === 'diretora')) return;
+      const opt = document.createElement('option');
+      opt.value = op.value;
+      opt.textContent = op.label;
+      sel.appendChild(opt);
+    });
+  }
+
   function abrirModalNovoUsuario() {
     limparFormularioUsuario();
     atualizarModalUsuario('novo');
+    // Filtra opcoes de perfil: nivel 1 so pode criar nivel 2 e somente leitura
+    filtrarOpcoesPerfilModal();
     openModal('modal-usuario');
   }
 
@@ -1741,9 +1769,10 @@
     document.getElementById('user-id').value = user.id;
     document.getElementById('user-nome').value = user.nome || '';
     document.getElementById('user-email').value = user.email || '';
-    document.getElementById('user-perfil').value = user.perfil || '';
     document.getElementById('user-escola').value = user.escola || '';
     atualizarModalUsuario('editar');
+    filtrarOpcoesPerfilModal();
+    document.getElementById('user-perfil').value = user.perfil || '';
     openModal('modal-usuario');
   }
 
