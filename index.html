@@ -1526,13 +1526,45 @@
   async function inicializarSetores() {
     if (App.usuario.perfil !== 'administrador') return;
 
-    // Usa apenas os setores realmente presentes nos produtos cadastrados
+    const normalizarSetor = valor => String(valor || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/setor\s*de\s*/g, '')
+      .replace(/[^a-z0-9]/g, '')
+      .trim();
+
+    // Busca setores distintos dos produtos (ignora "geral", que e apenas o default do banco)
     const { data } = await db.from('produtos').select('setor');
-    const todosSetores = [...new Set(
+    const setoresDB = [...new Set(
       (data || [])
         .map(p => String(p.setor || '').trim())
         .filter(s => s && s.toLowerCase() !== 'geral')
-    )].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    )];
+
+    // Pega setores dos perfis cadastrados para o administrador conseguir visualizar todos
+    const { data: perfisData } = await db.from('perfis').select('escola');
+    const setoresPerfis = [...new Set(
+      (perfisData || [])
+        .map(p => String(p.escola || '').trim())
+        .filter(Boolean)
+    )];
+
+    // Une os dois sem duplicar variacoes como "T.I", "T.I.", "TI" ou "Setor de T.I."
+    const mapaSetores = new Map();
+    [...setoresDB, ...setoresPerfis].forEach(setor => {
+      const nome = String(setor || '').trim();
+      if (!nome) return;
+      const chave = normalizarSetor(nome);
+      if (!chave) return;
+      const atual = mapaSetores.get(chave);
+      const veioDosProdutos = setoresDB.includes(nome);
+      if (!atual || veioDosProdutos) {
+        mapaSetores.set(chave, nome);
+      }
+    });
+
+    const todosSetores = [...mapaSetores.values()].sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
     const opts = '<option value="todos">Todos os locais</option>' +
       todosSetores.map(s => `<option value="${s}">${s}</option>`).join('');
