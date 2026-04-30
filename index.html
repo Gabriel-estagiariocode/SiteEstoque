@@ -492,7 +492,19 @@
       .info-legal-grid { grid-template-columns: 1fr; }
       .info-hero { padding: 22px; }
     }
-  </style>
+  
+  /* Linha clicavel na tabela de produtos */
+  .tr-clicavel { cursor: pointer; transition: background 0.15s; }
+  .tr-clicavel:hover { background: var(--hover) !important; }
+
+  /* Modal detalhe produto */
+  #modal-detalhe-produto .modal { max-width: 480px; }
+  .detalhe-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  .detalhe-item { display: flex; flex-direction: column; gap: 4px; }
+  .detalhe-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--text-faint); }
+  .detalhe-valor { font-size: 14px; color: var(--text); font-weight: 500; }
+  .detalhe-divider { grid-column: 1/-1; border: none; border-top: 1px solid var(--border); margin: 4px 0; }
+</style>
 </head>
 <body>
 
@@ -625,9 +637,7 @@
             <table>
               <thead>
                 <tr>
-                  <th>Produto</th><th>Categoria</th><th>Qtd atual</th><th>Unidade</th>
-                  <th>Qtd mínima</th><th>Validade</th><th>Status</th><th>Última entrada</th>
-                  <th>Última saída</th><th>Cadastrado por</th><th>Ações</th>
+                  <th>Produto</th><th>Categoria</th><th>Qtd atual</th><th>Unidade</th><th>Validade</th><th>Status</th><th>Ações</th>
                 </tr>
               </thead>
               <tbody id="tbody-produtos">
@@ -1504,30 +1514,46 @@
 
     const tbody = document.getElementById('tbody-produtos');
     if (!lista.length) {
-      tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state"><div class="empty-icon">🗃</div><p>Nenhum produto encontrado.</p></div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🗃</div><p>Nenhum produto encontrado.</p></div></td></tr>`;
       return;
     }
     tbody.innerHTML = lista.map(p => {
       const st = statusProduto(p);
       const validade = statusValidade(p);
-      return `<tr>
+      return `<tr class="tr-clicavel" onclick="abrirDetalheProduto(${p.id})" title="Clique para mais detalhes">
         <td class="font-semi">${p.nome}</td>
         <td><span class="badge badge-gray">${p.categoria || '—'}</span></td>
         <td class="font-semi">${p.qtd_atual}</td>
         <td class="text-muted">${p.unidade || '—'}</td>
-        <td class="text-muted">${p.qtd_minima}</td>
         <td><span class="badge ${validade.cls}">${validade.label === 'Sem validade' ? 'Sem data' : fmtData(p.validade)}</span></td>
         <td><span class="badge ${st.cls}">${st.label}</span></td>
-        <td class="text-muted text-sm">${fmtData(p.ultima_entrada)}</td>
-        <td class="text-muted text-sm">${fmtData(p.ultima_saida)}</td>
-        <td><div class="flex items-center gap-8"><div class="avatar avatar-sm">${iniciais(p.criado_por)}</div><span class="text-sm">${p.criado_por || '—'}</span></div></td>
-        <td class="actions-cell"><div class="flex gap-8">
+        <td class="actions-cell" onclick="event.stopPropagation()"><div class="flex gap-8">
           ${perm('editarProdutos') ? `<button class="btn btn-xs" onclick="abrirModalEditarProduto(${p.id})">Editar</button>` : ''}
           ${perm('editarProdutos') ? `<button class="btn btn-xs btn-danger" onclick="abrirModalExcluirProduto(${p.id})">Excluir</button>` : ''}
           ${perm('registrarMov')   ? `<button class="btn btn-xs" onclick="baixaRapida(${p.id})">Baixa</button>` : ''}
         </div></td>
       </tr>`;
     }).join('');
+  }
+
+  function abrirDetalheProduto(id) {
+    const p = App.produtos.find(x => x.id === id);
+    if (!p) return;
+    const st = statusProduto(p);
+    const validade = statusValidade(p);
+    document.getElementById('detalhe-nome').textContent        = p.nome;
+    document.getElementById('detalhe-categoria').textContent   = p.categoria || '—';
+    document.getElementById('detalhe-qtd-atual').innerHTML     = `${p.qtd_atual} <span class="badge ${st.cls}" style="margin-left:6px">${st.label}</span>`;
+    document.getElementById('detalhe-qtd-minima').textContent  = p.qtd_minima ?? '—';
+    document.getElementById('detalhe-unidade').textContent     = p.unidade || '—';
+    document.getElementById('detalhe-validade').innerHTML      = `<span class="badge ${validade.cls}">${validade.label === 'Sem validade' ? 'Sem data' : fmtData(p.validade)}</span>`;
+    document.getElementById('detalhe-ultima-entrada').textContent = fmtData(p.ultima_entrada) || '—';
+    document.getElementById('detalhe-ultima-saida').textContent   = fmtData(p.ultima_saida)   || '—';
+    document.getElementById('detalhe-local').textContent       = p.local  || '—';
+    document.getElementById('detalhe-setor').textContent       = p.setor  || '—';
+    document.getElementById('detalhe-criado-por').textContent  = p.criado_por || '—';
+    document.getElementById('detalhe-obs').textContent         = p.obs || '—';
+    openModal('modal-detalhe-produto');
   }
 
   function renderVencimentos() {
@@ -2094,6 +2120,68 @@ async function salvarUsuario() {
     if (e.key === 'Enter') handleLogin();
   });
 </script>
+
+<!-- Modal Detalhe Produto -->
+<div id="modal-detalhe-produto" class="modal-backdrop hidden">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="detalhe-nome">Detalhes do Produto</div>
+        <div class="text-muted text-sm" id="detalhe-categoria" style="margin-top:2px"></div>
+      </div>
+      <button class="btn btn-icon" onclick="closeModal('modal-detalhe-produto')">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div class="detalhe-grid">
+        <div class="detalhe-item">
+          <span class="detalhe-label">Quantidade Atual</span>
+          <span class="detalhe-valor" id="detalhe-qtd-atual"></span>
+        </div>
+        <div class="detalhe-item">
+          <span class="detalhe-label">Quantidade Mínima</span>
+          <span class="detalhe-valor" id="detalhe-qtd-minima"></span>
+        </div>
+        <div class="detalhe-item">
+          <span class="detalhe-label">Unidade</span>
+          <span class="detalhe-valor" id="detalhe-unidade"></span>
+        </div>
+        <div class="detalhe-item">
+          <span class="detalhe-label">Validade</span>
+          <span class="detalhe-valor" id="detalhe-validade"></span>
+        </div>
+        <hr class="detalhe-divider">
+        <div class="detalhe-item">
+          <span class="detalhe-label">Última Entrada</span>
+          <span class="detalhe-valor" id="detalhe-ultima-entrada"></span>
+        </div>
+        <div class="detalhe-item">
+          <span class="detalhe-label">Última Saída</span>
+          <span class="detalhe-valor" id="detalhe-ultima-saida"></span>
+        </div>
+        <hr class="detalhe-divider">
+        <div class="detalhe-item">
+          <span class="detalhe-label">Local</span>
+          <span class="detalhe-valor" id="detalhe-local"></span>
+        </div>
+        <div class="detalhe-item">
+          <span class="detalhe-label">Setor</span>
+          <span class="detalhe-valor" id="detalhe-setor"></span>
+        </div>
+        <div class="detalhe-item" style="grid-column:1/-1">
+          <span class="detalhe-label">Cadastrado por</span>
+          <span class="detalhe-valor" id="detalhe-criado-por"></span>
+        </div>
+        <div class="detalhe-item" style="grid-column:1/-1">
+          <span class="detalhe-label">Observações</span>
+          <span class="detalhe-valor" id="detalhe-obs"></span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-detalhe-produto')">Fechar</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
 
