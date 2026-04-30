@@ -1530,7 +1530,7 @@
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
-      .replace(/setor\s*de\s*/g, '')
+      .replace(/^setor\s*(de\s*)?/g, '')
       .replace(/[^a-z0-9]/g, '')
       .trim();
 
