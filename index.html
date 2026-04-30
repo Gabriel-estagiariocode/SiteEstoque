@@ -504,7 +504,34 @@
   .detalhe-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--text-faint); }
   .detalhe-valor { font-size: 14px; color: var(--text); font-weight: 500; }
   .detalhe-divider { grid-column: 1/-1; border: none; border-top: 1px solid var(--border); margin: 4px 0; }
+
+  /* Olho toggle senha */
+  .input-senha-wrap { position: relative; display: flex; align-items: center; }
+  .input-senha-wrap input { flex: 1; padding-right: 38px !important; }
+  .btn-toggle-senha {
+    position: absolute; right: 8px; background: none; border: none;
+    cursor: pointer; color: var(--text-muted); padding: 4px;
+    display: flex; align-items: center; font-size: 16px;
+    transition: color 0.15s;
+  }
+  .btn-toggle-senha:hover { color: var(--text); }
+
+  /* Painel recuperar senha */
+  #painel-reset { display: none; margin-top: 12px; }
+  .reset-step { display: none; }
+  .reset-step.ativo { display: block; }
+  .reset-codigo-inputs { display: flex; gap: 8px; justify-content: center; margin: 16px 0; }
+  .reset-codigo-inputs input {
+    width: 44px; height: 52px; text-align: center; font-size: 22px;
+    font-weight: 700; border: 2px solid var(--border); border-radius: var(--radius);
+    background: var(--input-bg); color: var(--text); transition: border-color 0.15s;
+  }
+  .reset-codigo-inputs input:focus { border-color: var(--green); outline: none; }
+  .reset-msg { font-size: 12px; text-align: center; margin-top: 8px; min-height: 18px; }
+  .reset-msg.erro { color: var(--red); }
+  .reset-msg.ok   { color: var(--green); }
 </style>
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </head>
 <body>
 
@@ -526,12 +553,68 @@
       </div>
       <div class="form-group">
         <label class="form-label">Senha</label>
-        <input type="password" id="login-pass" placeholder="********" autocomplete="current-password" />
+        <div class="input-senha-wrap">
+          <input type="password" id="login-pass" placeholder="********" autocomplete="current-password" />
+          <button type="button" class="btn-toggle-senha" onclick="toggleSenha('login-pass', this)" tabindex="-1" title="Mostrar/ocultar senha">&#128065;</button>
+        </div>
       </div>
       <div id="login-error" class="hidden" style="font-size:12px;color:var(--red);background:var(--red-bg);padding:8px 10px;border-radius:var(--radius)"></div>
+      <!-- reCAPTCHA -->
+      <div class="g-recaptcha" data-sitekey="6LfBFtIsAAAAAAO3pz90sd3q8rcuUsxDxgcD2ciS" style="transform:scale(0.87);transform-origin:0 0;margin-bottom:-8px"></div>
       <button class="btn btn-primary w-full" id="btn-login" style="justify-content:center;margin-top:4px" onclick="handleLogin()">
         Entrar no sistema
       </button>
+      <button type="button" class="btn w-full" style="justify-content:center;margin-top:6px;font-size:13px;color:var(--text-muted)" onclick="abrirReset()">
+        Esqueci minha senha
+      </button>
+    </div>
+
+    <!-- Painel recuperar senha -->
+    <div id="painel-reset">
+      <hr class="login-divider" />
+      <!-- Step 1: digitar e-mail -->
+      <div id="reset-step1" class="reset-step ativo">
+        <p style="font-size:13px;text-align:center;margin-bottom:12px;color:var(--text-muted)">Digite seu e-mail para receber o código de verificação.</p>
+        <input type="email" id="reset-email" placeholder="seuemail@quata.sp.gov.br" style="width:100%;box-sizing:border-box" />
+        <div id="reset-msg1" class="reset-msg"></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn w-full" style="justify-content:center" onclick="fecharReset()">Cancelar</button>
+          <button class="btn btn-primary w-full" id="btn-enviar-codigo" style="justify-content:center" onclick="enviarCodigoReset()">Enviar código</button>
+        </div>
+      </div>
+      <!-- Step 2: digitar codigo -->
+      <div id="reset-step2" class="reset-step">
+        <p style="font-size:13px;text-align:center;margin-bottom:4px;color:var(--text-muted)">Digite o código de 6 dígitos enviado para</p>
+        <p id="reset-email-exibido" style="font-size:13px;text-align:center;font-weight:600;margin-bottom:12px"></p>
+        <div class="reset-codigo-inputs">
+          <input type="text" maxlength="1" id="rc0" oninput="avancaCodigo(this,0)" />
+          <input type="text" maxlength="1" id="rc1" oninput="avancaCodigo(this,1)" />
+          <input type="text" maxlength="1" id="rc2" oninput="avancaCodigo(this,2)" />
+          <input type="text" maxlength="1" id="rc3" oninput="avancaCodigo(this,3)" />
+          <input type="text" maxlength="1" id="rc4" oninput="avancaCodigo(this,4)" />
+          <input type="text" maxlength="1" id="rc5" oninput="avancaCodigo(this,5)" />
+          <input type="text" maxlength="1" id="rc6" oninput="avancaCodigo(this,6)" />
+          <input type="text" maxlength="1" id="rc7" oninput="avancaCodigo(this,7)" />
+        </div>
+        <div id="reset-msg2" class="reset-msg"></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn w-full" style="justify-content:center" onclick="voltarStep(1)">Voltar</button>
+          <button class="btn btn-primary w-full" id="btn-verificar-codigo" style="justify-content:center" onclick="verificarCodigoReset()">Verificar</button>
+        </div>
+      </div>
+      <!-- Step 3: nova senha -->
+      <div id="reset-step3" class="reset-step">
+        <p style="font-size:13px;text-align:center;margin-bottom:12px;color:var(--text-muted)">Código verificado! Defina sua nova senha.</p>
+        <div class="input-senha-wrap">
+          <input type="password" id="reset-nova-senha" placeholder="Mínimo 6 caracteres" />
+          <button type="button" class="btn-toggle-senha" onclick="toggleSenha('reset-nova-senha', this)" tabindex="-1">&#128065;</button>
+        </div>
+        <div id="reset-msg3" class="reset-msg"></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn w-full" style="justify-content:center" onclick="fecharReset()">Cancelar</button>
+          <button class="btn btn-primary w-full" id="btn-salvar-nova-senha" style="justify-content:center" onclick="salvarNovaSenha()">Salvar nova senha</button>
+        </div>
+      </div>
     </div>
 
     <hr class="login-divider" />
@@ -1095,7 +1178,10 @@
       </div>
       <div class="form-group">
         <label class="form-label" id="user-senha-label">Senha temporária *</label>
-        <input type="text" id="user-senha" placeholder="Mínimo 6 caracteres" />
+        <div class="input-senha-wrap">
+          <input type="password" id="user-senha" placeholder="Mínimo 6 caracteres" />
+          <button type="button" class="btn-toggle-senha" onclick="toggleSenha('user-senha', this)" tabindex="-1" title="Mostrar/ocultar senha">&#128065;</button>
+        </div>
       </div>
       <div id="user-error" class="hidden" style="font-size:12px;color:var(--red);background:var(--red-bg);padding:8px 10px;border-radius:var(--radius)"></div>
       <div class="info-box" id="user-info-box">O usuário receberá acesso com essa senha e poderá alterá-la depois.</div>
@@ -1245,6 +1331,14 @@
 
     if (!email || !senha) { err.textContent = 'Preencha e-mail e senha.'; err.classList.remove('hidden'); return; }
 
+    // Verifica reCAPTCHA
+    const captchaToken = typeof grecaptcha !== 'undefined' ? grecaptcha.getResponse() : '';
+    if (!captchaToken) {
+      err.textContent = 'Confirme que você não é um robô antes de continuar.';
+      err.classList.remove('hidden');
+      return;
+    }
+
     btn.disabled = true; btn.textContent = 'Entrando...';
 
     const { data, error } = await db.auth.signInWithPassword({ email, password: senha });
@@ -1253,6 +1347,7 @@
       err.textContent = 'E-mail ou senha incorretos.';
       err.classList.remove('hidden');
       btn.disabled = false; btn.textContent = 'Entrar no sistema';
+      if (typeof grecaptcha !== 'undefined') grecaptcha.reset();
       return;
     }
 
@@ -2144,6 +2239,92 @@ async function salvarUsuario() {
   });
 
   aplicarTema(localStorage.getItem('theme-preference') || 'light');
+
+  /* Toggle senha */
+  function toggleSenha(inputId, btn) {
+    const inp = document.getElementById(inputId);
+    const mostrar = inp.type === 'password';
+    inp.type = mostrar ? 'text' : 'password';
+    btn.innerHTML = mostrar ? '&#128064;' : '&#128065;';
+  }
+
+  /* Recuperar senha */
+  function abrirReset() {
+    document.getElementById('painel-reset').style.display = 'block';
+    voltarStep(1);
+    document.getElementById('reset-email').value = document.getElementById('login-email').value || '';
+  }
+
+  function fecharReset() {
+    document.getElementById('painel-reset').style.display = 'none';
+  }
+
+  function voltarStep(n) {
+    document.querySelectorAll('.reset-step').forEach(el => el.classList.remove('ativo'));
+    document.getElementById('reset-step' + n).classList.add('ativo');
+    ['reset-msg1','reset-msg2','reset-msg3'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.textContent = ''; el.className = 'reset-msg'; }
+    });
+  }
+
+  function avancaCodigo(inp, idx) {
+    inp.value = inp.value.replace(/[^0-9]/g, '');
+    if (inp.value && idx < 7) document.getElementById('rc' + (idx + 1)).focus();
+  }
+
+  async function enviarCodigoReset() {
+    const email = document.getElementById('reset-email').value.trim().toLowerCase();
+    const msg   = document.getElementById('reset-msg1');
+    const btn   = document.getElementById('btn-enviar-codigo');
+    if (!email) { msg.textContent = 'Digite seu e-mail.'; msg.className = 'reset-msg erro'; return; }
+    btn.disabled = true; btn.textContent = 'Enviando...';
+    const { error } = await db.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
+    btn.disabled = false; btn.textContent = 'Enviar código';
+    if (error) {
+      msg.textContent = 'E-mail não encontrado ou erro ao enviar.';
+      msg.className = 'reset-msg erro';
+      return;
+    }
+    document.getElementById('reset-email-exibido').textContent = email;
+    voltarStep(2);
+  }
+
+  async function verificarCodigoReset() {
+    const email  = document.getElementById('reset-email').value.trim().toLowerCase();
+    const token  = [0,1,2,3,4,5,6,7].map(i => document.getElementById('rc'+i).value).join('');
+    const msg    = document.getElementById('reset-msg2');
+    const btn    = document.getElementById('btn-verificar-codigo');
+    if (token.length < 8) { msg.textContent = 'Digite os 8 dígitos.'; msg.className = 'reset-msg erro'; return; }
+    btn.disabled = true; btn.textContent = 'Verificando...';
+    const { error } = await db.auth.verifyOtp({ email, token, type: 'email' });
+    btn.disabled = false; btn.textContent = 'Verificar';
+    if (error) {
+      msg.textContent = 'Código inválido ou expirado. Tente novamente.';
+      msg.className = 'reset-msg erro';
+      return;
+    }
+    voltarStep(3);
+  }
+
+  async function salvarNovaSenha() {
+    const senha = document.getElementById('reset-nova-senha').value;
+    const msg   = document.getElementById('reset-msg3');
+    const btn   = document.getElementById('btn-salvar-nova-senha');
+    if (!senha || senha.length < 6) { msg.textContent = 'A senha deve ter no mínimo 6 caracteres.'; msg.className = 'reset-msg erro'; return; }
+    btn.disabled = true; btn.textContent = 'Salvando...';
+    const { error } = await db.auth.updateUser({ password: senha });
+    btn.disabled = false; btn.textContent = 'Salvar nova senha';
+    if (error) {
+      msg.textContent = 'Erro ao salvar senha: ' + error.message;
+      msg.className = 'reset-msg erro';
+      return;
+    }
+    msg.textContent = 'Senha alterada com sucesso! Faça login normalmente.';
+    msg.className = 'reset-msg ok';
+    await db.auth.signOut();
+    setTimeout(() => fecharReset(), 2500);
+  }
 
   document.getElementById('login-pass').addEventListener('keydown', e => {
     if (e.key === 'Enter') handleLogin();
