@@ -781,7 +781,7 @@
       <div class="page-header">
         <div>
           <div class="page-title">Itens a vencer</div>
-          <div class="page-sub">Produtos com validade nos pr&oacute;ximos 10 dias</div>
+          <div class="page-sub">Produtos com validade nos pr&oacute;ximos 30 dias</div>
         </div>
       </div>
       <div class="page-body">
@@ -1348,7 +1348,7 @@
     if (!p.validade) return { label: 'Sem validade', cls: 'badge-gray', dias: null };
     const dias = diasAteValidade(p.validade);
     if (dias < 0) return { label: 'Vencido', cls: 'badge-red', dias };
-    if (dias <= 10) return { label: dias === 0 ? 'Vence hoje' : 'A vencer', cls: 'badge-amber', dias };
+    if (dias <= 30) return { label: dias === 0 ? 'Vence hoje' : 'A vencer', cls: 'badge-amber', dias };
     return { label: 'No prazo', cls: 'badge-green', dias };
   }
 
@@ -1797,12 +1797,12 @@
     const lista = App.produtos
       .filter(p => {
         const dias = diasAteValidade(p.validade);
-        return dias !== null && dias <= 10;
+        return dias !== null && dias <= 30;
       })
       .sort((a, b) => diasAteValidade(a.validade) - diasAteValidade(b.validade));
 
     if (!lista.length) {
-      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">⏰</div><p>Nenhum item vencido ou com vencimento nos próximos 10 dias.</p></div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">⏰</div><p>Nenhum item vencido ou com vencimento nos próximos 30 dias.</p></div></td></tr>`;
       return;
     }
 
