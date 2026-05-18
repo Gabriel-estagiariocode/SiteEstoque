@@ -1361,6 +1361,22 @@
     }[perfil] || { label: perfil, cls: 'badge-gray' };
   }
 
+  function normalizarSetor(valor) {
+    return String(valor || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/^setor\s*(de\s*)?/g, '')
+      .replace(/[^a-z0-9]/g, '')
+      .trim();
+  }
+
+  function padronizarNomeSetor(valor) {
+    const texto = String(valor || '').trim();
+    if (!texto) return '';
+    return normalizarSetor(texto) === 'ti' ? 'Setor de T.I' : texto;
+  }
+
   function iniciais(nome) {
     if (!nome) return '?';
     return nome.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -1477,8 +1493,9 @@
   }
 
   function iniciarSessao(email, nome, perfil, escola) {
-    App.usuario = { email, nome, perfil, escola };
-    App.setorAtivo = perfil === 'administrador' ? 'todos' : escola;
+    const escolaPadronizada = padronizarNomeSetor(escola);
+    App.usuario = { email, nome, perfil, escola: escolaPadronizada };
+    App.setorAtivo = perfil === 'administrador' ? 'todos' : escolaPadronizada;
 
     document.getElementById('sidebar-username').textContent = nome;
     document.getElementById('sidebar-avatar').textContent   = iniciais(nome);
@@ -1526,19 +1543,11 @@
   async function inicializarSetores() {
     if (App.usuario.perfil !== 'administrador') return;
 
-    const normalizarSetor = valor => String(valor || '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .replace(/^setor\s*(de\s*)?/g, '')
-      .replace(/[^a-z0-9]/g, '')
-      .trim();
-
     // Busca setores distintos dos produtos (ignora "geral", que e apenas o default do banco)
     const { data } = await db.from('produtos').select('setor');
     const setoresDB = [...new Set(
       (data || [])
-        .map(p => String(p.setor || '').trim())
+        .map(p => padronizarNomeSetor(p.setor))
         .filter(s => s && s.toLowerCase() !== 'geral')
     )];
 
@@ -1546,7 +1555,7 @@
     const { data: perfisData } = await db.from('perfis').select('escola');
     const setoresPerfis = [...new Set(
       (perfisData || [])
-        .map(p => String(p.escola || '').trim())
+        .map(p => padronizarNomeSetor(p.escola))
         .filter(Boolean)
     )];
 
@@ -1869,7 +1878,7 @@
     // Nivel 1 (diretora) so ve usuarios do mesmo setor; adm ve todos
     const lista = App.usuarios.filter(u => {
       if (App.usuario.perfil === 'administrador') return true;
-      return u.escola === App.usuario.escola;
+      return normalizarSetor(u.escola) === normalizarSetor(App.usuario.escola);
     });
     if (!lista.length) {
       tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">👥</div><p>Nenhum usuário cadastrado.</p></div></td></tr>`;
@@ -1881,7 +1890,7 @@
         <td><div class="flex items-center gap-8"><div class="avatar">${iniciais(u.nome)}</div><span class="font-semi">${u.nome}</span></div></td>
         <td class="text-muted text-sm">${u.email}</td>
         <td><span class="badge ${pb.cls}">${pb.label}</span></td>
-        <td>${u.escola || '—'}</td>
+        <td>${padronizarNomeSetor(u.escola) || '—'}</td>
         <td class="text-muted text-sm">${fmtData(u.criado_em)}</td>
         <td><span class="badge ${u.ativo ? 'badge-green' : 'badge-red'}">${u.ativo ? 'Ativo' : 'Inativo'}</span></td>
         <td class="actions-cell">${podeGerirUsuario(u) ? `<div class="flex gap-8"><button class="btn btn-xs" onclick="abrirModalEditarUsuario('${u.id}')">Editar</button><button class="btn btn-xs" onclick="toggleUsuario('${u.id}', ${u.ativo})">${u.ativo ? 'Desativar' : 'Ativar'}</button><button class="btn btn-xs btn-danger" onclick="abrirModalExcluirUsuario('${u.id}')">Excluir</button></div>` : '—'}</td>
@@ -1996,7 +2005,7 @@
     document.getElementById('user-id').value = user.id;
     document.getElementById('user-nome').value = user.nome || '';
     document.getElementById('user-email').value = user.email || '';
-    document.getElementById('user-escola').value = user.escola || '';
+    document.getElementById('user-escola').value = padronizarNomeSetor(user.escola);
     atualizarModalUsuario('editar');
     filtrarOpcoesPerfilModal();
     document.getElementById('user-perfil').value = user.perfil || '';
@@ -2237,7 +2246,7 @@ async function salvarUsuario() {
   const nome   = document.getElementById('user-nome').value.trim();
   const email  = document.getElementById('user-email').value.trim().toLowerCase();
   const perfil = document.getElementById('user-perfil').value;
-  const escola = document.getElementById('user-escola').value.trim();
+  const escola = padronizarNomeSetor(document.getElementById('user-escola').value);
   const senha  = document.getElementById('user-senha').value;
   const errEl  = document.getElementById('user-error');
   const editando = !!id;
