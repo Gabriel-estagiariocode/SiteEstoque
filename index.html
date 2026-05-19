@@ -1283,9 +1283,35 @@
 <script>
   /* ── Supabase ─────────────────────────────────────────── */
   const { createClient } = supabase;
+  const AUTH_STORAGE_KEY = 'siteestoque-auth-token';
+  const INACTIVITY_STORAGE_KEY = 'siteestoque-last-activity';
+  const INACTIVITY_LIMIT_MS = 4 * 60 * 60 * 1000;
+  const INACTIVITY_CHECK_INTERVAL_MS = 60 * 1000;
+  const ACTIVITY_WRITE_THROTTLE_MS = 30 * 1000;
+  const ACTIVITY_EVENTS = ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove'];
+  const sessionStorageAdapter = {
+    getItem(key) {
+      return window.sessionStorage.getItem(key);
+    },
+    setItem(key, value) {
+      window.sessionStorage.setItem(key, value);
+    },
+    removeItem(key) {
+      window.sessionStorage.removeItem(key);
+    }
+  };
   const db = createClient(
     'https://vqrogebjodwaioyjcrws.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxcm9nZWJqb2R3YWlveWpjcndzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NDMxNjMsImV4cCI6MjA5MTQxOTE2M30.m9VnXhQebf-U0Ivn3nkO-wSM9dweYMjLNs8tYvXB0fI'
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxcm9nZWJqb2R3YWlveWpjcndzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NDMxNjMsImV4cCI6MjA5MTQxOTE2M30.m9VnXhQebf-U0Ivn3nkO-wSM9dweYMjLNs8tYvXB0fI',
+    {
+      auth: {
+        storage: sessionStorageAdapter,
+        storageKey: AUTH_STORAGE_KEY,
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+      }
+    }
   );
 
   /* ── Estado ───────────────────────────────────────────── */
@@ -1296,6 +1322,9 @@
     usuarios:      [],
     setorAtivo:    null,
   };
+  let inactivityIntervalId = null;
+  let lastActivityWriteAt = 0;
+  let logoutInProgress = false;
 
   /* ── Permissões ───────────────────────────────────────── */
   const PERMS = {
@@ -1404,6 +1433,69 @@
     aplicarTema(atual === 'dark' ? 'light' : 'dark');
   }
 
+  function lerUltimaAtividade() {
+    const valor = Number(sessionStorage.getItem(INACTIVITY_STORAGE_KEY));
+    return Number.isFinite(valor) ? valor : 0;
+  }
+
+  function registrarAtividade(forcar = false) {
+    if (!App.usuario) return;
+    const agora = Date.now();
+    if (!forcar && agora - lastActivityWriteAt < ACTIVITY_WRITE_THROTTLE_MS) return;
+    lastActivityWriteAt = agora;
+    sessionStorage.setItem(INACTIVITY_STORAGE_KEY, String(agora));
+  }
+
+  function sessaoExpiradaPorInatividade() {
+    if (!App.usuario) return false;
+    const ultimaAtividade = lerUltimaAtividade();
+    if (!ultimaAtividade) return false;
+    return Date.now() - ultimaAtividade >= INACTIVITY_LIMIT_MS;
+  }
+
+  function processarAtividadeUsuario() {
+    if (!App.usuario || logoutInProgress) return;
+    if (sessaoExpiradaPorInatividade()) {
+      handleLogout({ mensagem: 'Sua sessão expirou após 4 horas de inatividade.', tipoToast: 'error' });
+      return;
+    }
+    registrarAtividade();
+  }
+
+  function iniciarMonitoramentoInatividade() {
+    pararMonitoramentoInatividade();
+    registrarAtividade(true);
+    ACTIVITY_EVENTS.forEach(evento => {
+      window.addEventListener(evento, processarAtividadeUsuario, { passive: true });
+    });
+    window.addEventListener('focus', processarAtividadeUsuario);
+    document.addEventListener('visibilitychange', handleVisibilidadeSessao);
+    inactivityIntervalId = window.setInterval(() => {
+      if (sessaoExpiradaPorInatividade()) {
+        handleLogout({ mensagem: 'Sua sessão expirou após 4 horas de inatividade.', tipoToast: 'error' });
+      }
+    }, INACTIVITY_CHECK_INTERVAL_MS);
+  }
+
+  function pararMonitoramentoInatividade() {
+    if (inactivityIntervalId) {
+      window.clearInterval(inactivityIntervalId);
+      inactivityIntervalId = null;
+    }
+    ACTIVITY_EVENTS.forEach(evento => {
+      window.removeEventListener(evento, processarAtividadeUsuario);
+    });
+    window.removeEventListener('focus', processarAtividadeUsuario);
+    document.removeEventListener('visibilitychange', handleVisibilidadeSessao);
+    sessionStorage.removeItem(INACTIVITY_STORAGE_KEY);
+    lastActivityWriteAt = 0;
+  }
+
+  function handleVisibilidadeSessao() {
+    if (document.visibilityState !== 'visible') return;
+    processarAtividadeUsuario();
+  }
+
   /* ── Toast ────────────────────────────────────────────── */
   function toast(msg, tipo = '') {
     const el = document.createElement('div');
@@ -1496,6 +1588,8 @@
     const escolaPadronizada = padronizarNomeSetor(escola);
     App.usuario = { email, nome, perfil, escola: escolaPadronizada };
     App.setorAtivo = perfil === 'administrador' ? 'todos' : escolaPadronizada;
+    registrarAtividade(true);
+    iniciarMonitoramentoInatividade();
 
     document.getElementById('sidebar-username').textContent = nome;
     document.getElementById('sidebar-avatar').textContent   = iniciais(nome);
@@ -1514,8 +1608,13 @@
     toast(`Bem-vindo(a), ${nome}!`, 'success');
   }
 
-  async function handleLogout() {
-    await db.auth.signOut();
+  async function handleLogout({ mensagem = '', tipoToast = '' } = {}) {
+    if (logoutInProgress) return;
+    logoutInProgress = true;
+    pararMonitoramentoInatividade();
+    try {
+      await db.auth.signOut();
+    } catch (_) {}
     App.usuario = null; App.produtos = []; App.movimentacoes = []; App.usuarios = [];
     document.getElementById('screen-app').classList.add('hidden');
     document.getElementById('screen-login').classList.remove('hidden');
@@ -1523,6 +1622,8 @@
     const btn = document.getElementById('btn-login');
     btn.disabled = false; btn.textContent = 'Entrar no sistema';
     switchTab('produtos', document.querySelector('[data-tab="produtos"]'));
+    logoutInProgress = false;
+    if (mensagem) toast(mensagem, tipoToast);
   }
 
   function togglePermUI() {
@@ -2369,6 +2470,12 @@ async function salvarUsuario() {
   ══════════════════════════════════════════════════════ */
   db.auth.getSession().then(async ({ data: { session } }) => {
     if (!session) return;
+    const ultimaAtividade = lerUltimaAtividade();
+    if (ultimaAtividade && Date.now() - ultimaAtividade >= INACTIVITY_LIMIT_MS) {
+      await db.auth.signOut();
+      toast('Sua sessão expirou após 4 horas de inatividade.', 'error');
+      return;
+    }
     const { data: perfil } = await db.from('perfis').select('*').eq('id', session.user.id).single();
     if (!perfil) return;
     if (perfil.ativo === false) {
