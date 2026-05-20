@@ -8,6 +8,7 @@
   <link rel="alternate icon" href="favicon.ico" sizes="any">
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="/app-config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     (() => {
@@ -260,6 +261,17 @@
     }
     .login-logo { width: 48px; height: 48px; border-radius: var(--radius-lg); background: var(--green-bg); display: flex; align-items: center; justify-content: center; font-size: 22px; margin: 0 auto 20px; }
     .login-divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+    .download-app-link {
+      justify-content: center;
+      gap: 8px;
+      text-decoration: none;
+      margin-top: 2px;
+    }
+    .download-app-link svg {
+      width: 16px;
+      height: 16px;
+      flex: 0 0 auto;
+    }
 
     /* App */
     #screen-app { display: flex; min-height: 100vh; }
@@ -590,6 +602,10 @@
       <button type="button" class="btn w-full" style="justify-content:center;margin-top:6px;font-size:13px;color:var(--text-muted)" onclick="abrirReset()">
         Esqueci minha senha
       </button>
+      <a id="btn-download-app" class="btn w-full download-app-link hidden" href="#" download>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+        <span>Baixar aplicativo</span>
+      </a>
     </div>
 
     <!-- Painel recuperar senha -->
@@ -1283,6 +1299,13 @@
 <script>
   /* ── Supabase ─────────────────────────────────────────── */
   const { createClient } = supabase;
+  const APP_CONFIG = window.APP_CONFIG || {
+    supabaseUrl: 'https://vqrogebjodwaioyjcrws.supabase.co',
+    supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxcm9nZWJqb2R3YWlveWpjcndzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NDMxNjMsImV4cCI6MjA5MTQxOTE2M30.m9VnXhQebf-U0Ivn3nkO-wSM9dweYMjLNs8tYvXB0fI',
+    recaptchaSiteKey: '6LfBFtIsAAAAAAO3pz90sd3q8rcuUsxDxgcD2ciS',
+    desktopInstallerUrl: ''
+  };
+  const IS_DESKTOP_APP = Boolean(window.electronApp?.isDesktop);
   const AUTH_STORAGE_KEY = 'siteestoque-auth-token';
   const INACTIVITY_STORAGE_KEY = 'siteestoque-last-activity';
   const INACTIVITY_LIMIT_MS = 4 * 60 * 60 * 1000;
@@ -1301,8 +1324,8 @@
     }
   };
   const db = createClient(
-    'https://vqrogebjodwaioyjcrws.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxcm9nZWJqb2R3YWlveWpjcndzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NDMxNjMsImV4cCI6MjA5MTQxOTE2M30.m9VnXhQebf-U0Ivn3nkO-wSM9dweYMjLNs8tYvXB0fI',
+    APP_CONFIG.supabaseUrl,
+    APP_CONFIG.supabaseAnonKey,
     {
       auth: {
         storage: sessionStorageAdapter,
@@ -1530,13 +1553,15 @@
 
     if (!email || !senha) { err.textContent = 'Preencha e-mail e senha.'; err.classList.remove('hidden'); return; }
 
-    if (!captchaConfirmado) {
+    if (!captchaConfirmado && !IS_DESKTOP_APP) {
       err.classList.add('hidden');
       abrirCaptchaModal();
       return;
     }
 
-    const captchaToken = captchaWidgetId !== null && typeof grecaptcha !== 'undefined'
+    const captchaToken = IS_DESKTOP_APP
+      ? 'desktop-login'
+      : captchaWidgetId !== null && typeof grecaptcha !== 'undefined'
       ? grecaptcha.getResponse(captchaWidgetId)
       : '';
     if (!captchaToken) {
@@ -2491,7 +2516,7 @@ async function salvarUsuario() {
   /* Toggle senha */
   const SVG_EYE_OPEN   = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
   const SVG_EYE_CLOSED = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
-  const RECAPTCHA_SITE_KEY = '6LfBFtIsAAAAAAO3pz90sd3q8rcuUsxDxgcD2ciS';
+  const RECAPTCHA_SITE_KEY = APP_CONFIG.recaptchaSiteKey;
   let captchaWidgetId = null;
 
   function toggleSenha(inputId, btn) {
@@ -2502,14 +2527,30 @@ async function salvarUsuario() {
   }
 
   function onRecaptchaApiLoad() {
+    if (IS_DESKTOP_APP) return;
     renderCaptchaWidget();
   }
 
   function renderCaptchaWidget() {
+    if (IS_DESKTOP_APP) return;
     if (captchaWidgetId !== null || typeof grecaptcha === 'undefined') return;
     const host = document.getElementById('login-captcha-widget');
     if (!host) return;
     captchaWidgetId = grecaptcha.render(host, { sitekey: RECAPTCHA_SITE_KEY });
+  }
+
+  function configurarDownloadDesktop() {
+    const link = document.getElementById('btn-download-app');
+    if (!link) return;
+
+    const installerUrl = String(APP_CONFIG.desktopInstallerUrl || '').trim();
+    if (IS_DESKTOP_APP || !installerUrl) {
+      link.classList.add('hidden');
+      return;
+    }
+
+    link.href = installerUrl;
+    link.classList.remove('hidden');
   }
 
   function limparErroCaptcha() {
@@ -2684,6 +2725,7 @@ async function salvarUsuario() {
   document.getElementById('login-pass').addEventListener('keydown', e => {
     if (e.key === 'Enter') handleLogin();
   });
+  configurarDownloadDesktop();
 </script>
 
 <!-- Modal Detalhe Produto -->
