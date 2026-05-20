@@ -1310,6 +1310,7 @@
   const INACTIVITY_STORAGE_KEY = 'siteestoque-last-activity';
   const INACTIVITY_LIMIT_MS = 4 * 60 * 60 * 1000;
   const INACTIVITY_CHECK_INTERVAL_MS = 60 * 1000;
+  const AUTO_REFRESH_INTERVAL_MS = 45 * 1000;
   const ACTIVITY_WRITE_THROTTLE_MS = 30 * 1000;
   const ACTIVITY_EVENTS = ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove'];
   const sessionStorageAdapter = {
@@ -1346,6 +1347,8 @@
     setorAtivo:    null,
   };
   let inactivityIntervalId = null;
+  let autoRefreshIntervalId = null;
+  let autoRefreshInFlight = false;
   let lastActivityWriteAt = 0;
   let logoutInProgress = false;
 
@@ -1456,6 +1459,10 @@
     aplicarTema(atual === 'dark' ? 'light' : 'dark');
   }
 
+  function abaAtiva() {
+    return document.querySelector('.nav-item.active')?.dataset?.tab || 'produtos';
+  }
+
   function lerUltimaAtividade() {
     const valor = Number(sessionStorage.getItem(INACTIVITY_STORAGE_KEY));
     return Number.isFinite(valor) ? valor : 0;
@@ -1517,6 +1524,7 @@
   function handleVisibilidadeSessao() {
     if (document.visibilityState !== 'visible') return;
     processarAtividadeUsuario();
+    sincronizarDados({ silent: true });
   }
 
   /* ── Toast ────────────────────────────────────────────── */
@@ -1615,6 +1623,7 @@
     App.setorAtivo = perfil === 'administrador' ? 'todos' : escolaPadronizada;
     registrarAtividade(true);
     iniciarMonitoramentoInatividade();
+    iniciarAutoRefresh();
 
     document.getElementById('sidebar-username').textContent = nome;
     document.getElementById('sidebar-avatar').textContent   = iniciais(nome);
@@ -1637,6 +1646,7 @@
     if (logoutInProgress) return;
     logoutInProgress = true;
     pararMonitoramentoInatividade();
+    pararAutoRefresh();
     try {
       await db.auth.signOut();
     } catch (_) {}
@@ -1809,13 +1819,14 @@
   /* ══════════════════════════════════════════════════════
      CARREGAR DADOS
   ══════════════════════════════════════════════════════ */
-  async function carregarTudo() {
-    await carregarProdutos();
-    await carregarMovimentacoes();
+  async function carregarTudo(options = {}) {
+    await carregarProdutos(options);
+    await carregarMovimentacoes(options);
     await inicializarSetores();
   }
 
-  async function carregarProdutos() {
+  async function carregarProdutos(options = {}) {
+    const { silent = false } = options;
     let query = db.from('produtos').select('*').order('nome');
     // 'todos' = sem filtro (admin ve tudo); null = usuario nao-admin usa escola propria
     if (App.setorAtivo && App.setorAtivo !== 'todos') {
@@ -1824,13 +1835,14 @@
       query = query.eq('setor', App.usuario.escola);
     }
     const { data, error } = await query;
-    if (error) { toast('Erro ao carregar produtos: ' + error.message, 'error'); return; }
+    if (error) { if (!silent) toast('Erro ao carregar produtos: ' + error.message, 'error'); return; }
     App.produtos = data || [];
     renderProdutos();
     renderVencimentos();
   }
 
-  async function carregarMovimentacoes() {
+  async function carregarMovimentacoes(options = {}) {
+    const { silent = false } = options;
     let query = db.from('movimentacoes').select('*').order('criado_em', { ascending: false });
     // 'todos' = sem filtro (admin ve tudo); null = usuario nao-admin usa escola propria
     if (App.setorAtivo && App.setorAtivo !== 'todos') {
@@ -1839,19 +1851,48 @@
       query = query.eq('setor', App.usuario.escola);
     }
     const { data, error } = await query;
-    if (error) { toast('Erro ao carregar movimentações: ' + error.message, 'error'); return; }
+    if (error) { if (!silent) toast('Erro ao carregar movimentações: ' + error.message, 'error'); return; }
     App.movimentacoes = data || [];
     renderMovimentacoes();
   }
 
-  async function carregarUsuarios() {
+  async function carregarUsuarios(options = {}) {
+    const { silent = false } = options;
     try {
       const body = await chamarAdminAPI('/api/list-users');
       App.usuarios = body.users || [];
       renderUsuarios();
     } catch (error) {
-      toast('Erro ao carregar usuários: ' + error.message, 'error');
+      if (!silent) toast('Erro ao carregar usuários: ' + error.message, 'error');
     }
+  }
+
+  async function sincronizarDados(options = {}) {
+    const { silent = true } = options;
+    if (!App.usuario || logoutInProgress || autoRefreshInFlight) return;
+
+    autoRefreshInFlight = true;
+    try {
+      await carregarTudo({ silent });
+      if (perm('gerirUsuarios') && abaAtiva() === 'usuarios') {
+        await carregarUsuarios({ silent });
+      }
+    } finally {
+      autoRefreshInFlight = false;
+    }
+  }
+
+  function iniciarAutoRefresh() {
+    pararAutoRefresh();
+    autoRefreshIntervalId = window.setInterval(() => {
+      sincronizarDados({ silent: true });
+    }, AUTO_REFRESH_INTERVAL_MS);
+  }
+
+  function pararAutoRefresh() {
+    if (!autoRefreshIntervalId) return;
+    window.clearInterval(autoRefreshIntervalId);
+    autoRefreshIntervalId = null;
   }
 
   /* ══════════════════════════════════════════════════════
@@ -2509,6 +2550,10 @@ async function salvarUsuario() {
       return;
     }
     iniciarSessao(session.user.email, perfil.nome, perfil.perfil, perfil.escola);
+  });
+
+  window.addEventListener('focus', () => {
+    sincronizarDados({ silent: true });
   });
 
   aplicarTema(localStorage.getItem('theme-preference') || 'light');

@@ -47,6 +47,10 @@
       {
         "from": "../build/app-icon.ico",
         "to": "app-icon.ico"
+      },
+      {
+        "from": "../.env",
+        "to": ".env"
       }
     ],
     "extraMetadata": {

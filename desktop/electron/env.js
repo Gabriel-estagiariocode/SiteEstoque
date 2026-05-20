@@ -1,5 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const { app } = require('electron');
 
 function parseEnvFile(content) {
   const entries = {};
@@ -34,19 +35,28 @@ function parseEnvFile(content) {
 }
 
 function loadEnvFile(projectRoot) {
-  const envPath = path.join(projectRoot, '.env');
-  if (!fs.existsSync(envPath)) {
-    return {};
+  const candidatePaths = [path.join(projectRoot, '.env')];
+
+  if (app?.isPackaged && process.resourcesPath) {
+    candidatePaths.unshift(path.join(process.resourcesPath, '.env'));
   }
 
-  const parsed = parseEnvFile(fs.readFileSync(envPath, 'utf8'));
-  for (const [key, value] of Object.entries(parsed)) {
-    if (!(key in process.env)) {
-      process.env[key] = value;
+  for (const envPath of candidatePaths) {
+    if (!fs.existsSync(envPath)) {
+      continue;
     }
+
+    const parsed = parseEnvFile(fs.readFileSync(envPath, 'utf8'));
+    for (const [key, value] of Object.entries(parsed)) {
+      if (!(key in process.env)) {
+        process.env[key] = value;
+      }
+    }
+
+    return parsed;
   }
 
-  return parsed;
+  return {};
 }
 
 module.exports = {

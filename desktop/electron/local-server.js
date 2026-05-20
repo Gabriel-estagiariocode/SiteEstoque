@@ -20,6 +20,7 @@ const DEFAULT_CONFIG = {
   recaptchaSiteKey: '6LfBFtIsAAAAAAO3pz90sd3q8rcuUsxDxgcD2ciS',
   desktopInstallerUrl: ''
 };
+const DEFAULT_PORT = 43128;
 
 function getAppConfig() {
   return {
@@ -114,8 +115,24 @@ async function createLocalServer(projectRoot) {
   });
 
   await new Promise((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(0, '127.0.0.1', resolve);
+    const tryListen = port => {
+      const handleError = error => {
+        server.off('error', handleError);
+        if (port !== 0 && error?.code === 'EADDRINUSE') {
+          tryListen(0);
+          return;
+        }
+        reject(error);
+      };
+
+      server.once('error', handleError);
+      server.listen(port, '127.0.0.1', () => {
+        server.off('error', handleError);
+        resolve();
+      });
+    };
+
+    tryListen(DEFAULT_PORT);
   });
 
   const address = server.address();
