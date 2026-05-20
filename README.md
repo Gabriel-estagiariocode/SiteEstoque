@@ -4,6 +4,20 @@ Repositorio para site de gerenciamento de estoque, criado com Claude Code e que 
 
 O projeto usa Supabase para autenticacao e dados. Agora ele tambem tem uma base limpa para rodar como aplicativo desktop com Electron.
 
+## Deploy na Vercel
+
+O repositorio tem arquivos do site e do app desktop. Para o deploy web, a Vercel nao precisa instalar `electron` nem `electron-builder`.
+
+Por isso existe o arquivo `vercel.json`, com:
+
+```json
+{
+  "installCommand": "npm install --omit=dev"
+}
+```
+
+Assim, no deploy da Vercel sao ignoradas as `devDependencies` usadas apenas no desktop.
+
 ## Electron
 
 ### O que foi preparado
