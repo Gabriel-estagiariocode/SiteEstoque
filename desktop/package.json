@@ -1,5 +1,5 @@
 {
-  "name": "siteestoque",
+  "name": "velostock",
   "version": "1.0.0",
   "description": "Aplicativo desktop Electron para o VeloStock",
   "author": "VeloStock",
@@ -15,7 +15,7 @@
     "electron-builder": "26.8.1"
   },
   "build": {
-    "appId": "br.com.siteestoque.app",
+    "appId": "br.com.velostock.app",
     "productName": "VeloStock",
     "npmRebuild": false,
     "directories": {
@@ -43,7 +43,15 @@
         ]
       }
     ],
+    "extraResources": [
+      {
+        "from": "../build/app-icon.ico",
+        "to": "app-icon.ico"
+      }
+    ],
     "extraMetadata": {
+      "name": "velostock",
+      "productName": "VeloStock",
       "main": "electron/main.js"
     },
     "win": {
@@ -55,10 +63,14 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": false,
       "shortcutName": "VeloStock",
-      "runAfterFinish": false
+      "runAfterFinish": false,
+      "installerIcon": "../build/app-icon.ico",
+      "uninstallerIcon": "../build/app-icon.ico",
+      "installerHeaderIcon": "../build/app-icon.ico",
+      "include": "../build/installer.nsh"
     }
   }
 }
