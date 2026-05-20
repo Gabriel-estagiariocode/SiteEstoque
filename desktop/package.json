@@ -1,8 +1,8 @@
 {
   "name": "siteestoque",
   "version": "1.0.0",
-  "description": "Aplicativo desktop Electron para o SiteEstoque",
-  "author": "SiteEstoque",
+  "description": "Aplicativo desktop Electron para o VeloStock",
+  "author": "VeloStock",
   "main": "electron/main.js",
   "scripts": {
     "start": "node electron/run-electron.js .",
@@ -16,7 +16,8 @@
   },
   "build": {
     "appId": "br.com.siteestoque.app",
-    "productName": "SiteEstoque",
+    "productName": "VeloStock",
+    "npmRebuild": false,
     "directories": {
       "output": "../release",
       "buildResources": "../build"
@@ -49,14 +50,14 @@
       "target": "nsis",
       "icon": "app-icon.ico",
       "signAndEditExecutable": false,
-      "artifactName": "SiteEstoque-Setup-${version}.${ext}"
+      "artifactName": "VeloStock-Setup-${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "SiteEstoque",
+      "shortcutName": "VeloStock",
       "runAfterFinish": false
     }
   }
