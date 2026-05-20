@@ -1,3 +1,3 @@
 {
-  "installCommand": "npm install --omit=dev"
+  "installCommand": "npm install --package-lock=false --omit=dev"
 }

@@ -12,11 +12,11 @@ Por isso existe o arquivo `vercel.json`, com:
 
 ```json
 {
-  "installCommand": "npm install --omit=dev"
+  "installCommand": "npm install --package-lock=false --omit=dev"
 }
 ```
 
-Assim, no deploy da Vercel sao ignoradas as `devDependencies` usadas apenas no desktop.
+Assim, no deploy da Vercel sao ignoradas as `devDependencies` usadas apenas no desktop, e o `package-lock.json` da raiz nao interfere no build web.
 
 ## Electron
 
