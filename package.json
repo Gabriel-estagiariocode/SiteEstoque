@@ -1,52 +1,5 @@
 {
-  "name": "siteestoque",
-  "version": "1.0.0",
-  "description": "Aplicativo desktop Electron para o SiteEstoque",
-  "author": "SiteEstoque",
-  "main": "electron/main.js",
-  "scripts": {
-    "start": "node electron/run-electron.js .",
-    "dev": "node electron/run-electron.js .",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder"
-  },
-  "devDependencies": {
-    "electron": "37.10.3",
-    "electron-builder": "26.8.1"
-  },
-  "build": {
-    "appId": "br.com.siteestoque.app",
-    "productName": "SiteEstoque",
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "electron/**/*",
-      "api/**/*",
-      "assets/**/*",
-      "app-config.js",
-      "index.html",
-      "favicon.ico",
-      "favicon.svg",
-      "package.json",
-      "README.md"
-    ],
-    "extraMetadata": {
-      "main": "electron/main.js"
-    },
-    "win": {
-      "target": "nsis",
-      "icon": "app-icon.ico",
-      "signAndEditExecutable": false,
-      "artifactName": "SiteEstoque-Setup-${version}.${ext}"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "SiteEstoque",
-      "runAfterFinish": false
-    }
-  }
+  "name": "siteestoque-web",
+  "private": true,
+  "version": "1.0.0"
 }

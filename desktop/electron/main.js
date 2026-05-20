@@ -5,7 +5,7 @@ const { app, BrowserWindow } = require('electron');
 const { loadEnvFile } = require('./env');
 const { createLocalServer } = require('./local-server');
 
-const projectRoot = path.resolve(__dirname, '..');
+const projectRoot = path.resolve(__dirname, '..', '..');
 
 let mainWindow = null;
 let localServer = null;

@@ -4,11 +4,16 @@ Repositorio para site de gerenciamento de estoque, criado com Claude Code e que 
 
 O projeto usa Supabase para autenticacao e dados. Agora ele tambem tem uma base limpa para rodar como aplicativo desktop com Electron.
 
+## Estrutura
+
+- raiz do projeto: site web + funcoes `api/` usadas pela Vercel
+- `desktop/`: aplicativo Electron
+
 ## Deploy na Vercel
 
-O repositorio tem arquivos do site e do app desktop. Para o deploy web, a Vercel nao precisa instalar `electron` nem `electron-builder`.
+A raiz do repositorio agora ficou separada da parte desktop. Assim, a Vercel instala apenas o projeto web.
 
-Por isso existe o arquivo `vercel.json`, com:
+O arquivo `vercel.json` permanece assim:
 
 ```json
 {
@@ -16,17 +21,17 @@ Por isso existe o arquivo `vercel.json`, com:
 }
 ```
 
-Assim, no deploy da Vercel sao ignoradas as `devDependencies` usadas apenas no desktop, e o `package-lock.json` da raiz nao interfere no build web.
+Assim, no deploy da Vercel sao ignoradas as `devDependencies`, e o `package-lock.json` do Electron nao interfere no build web.
 
 ## Electron
 
 ### O que foi preparado
 
-- `electron/main.js`: cria a janela principal do app.
-- `electron/local-server.js`: sobe um servidor local para servir `index.html`, `assets` e as rotas de `api/`.
-- `electron/preload.js`: ponto seguro para futuras integracoes entre renderer e processo principal.
+- `desktop/electron/main.js`: cria a janela principal do app.
+- `desktop/electron/local-server.js`: sobe um servidor local para servir `index.html`, `assets` e as rotas de `api/`.
+- `desktop/electron/preload.js`: ponto seguro para futuras integracoes entre renderer e processo principal.
 - `.env.example`: modelo das variaveis necessarias.
-- `package.json`: scripts para rodar e gerar instalador.
+- `desktop/package.json`: scripts para rodar e gerar instalador.
 
 ### Passo a passo para recomecar a integracao
 
@@ -41,18 +46,21 @@ Assim, no deploy da Vercel sao ignoradas as `devDependencies` usadas apenas no d
 3. Instale as dependencias:
 
 ```bash
+cd desktop
 npm install
 ```
 
 4. Rode o app desktop em desenvolvimento:
 
 ```bash
+cd desktop
 npm run dev
 ```
 
 5. Gere o executavel quando quiser empacotar:
 
 ```bash
+cd desktop
 npm run dist
 ```
 
