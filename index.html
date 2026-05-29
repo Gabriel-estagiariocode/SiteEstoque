@@ -133,7 +133,12 @@
     .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
     .card-body { padding: 16px 20px; }
 
-    .metric-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 18px; }
+    .metric-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+      padding: 14px 18px; text-align: left; color: var(--text); width: 100%;
+    }
+    .metric-card:hover { background: var(--surface-2); border-color: var(--border-dark); }
+    .metric-card.active { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45,106,79,.12); }
     .metric-label { font-size: 11px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
     .metric-value { font-size: 26px; font-weight: 600; line-height: 1.2; margin-top: 4px; }
     .metric-sub   { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
@@ -815,10 +820,10 @@
           </select>
         </div>
         <div class="metrics-grid">
-          <div class="metric-card"><div class="metric-label">Total de itens</div><div class="metric-value" id="metric-total">—</div><div class="metric-sub">produtos cadastrados</div></div>
-          <div class="metric-card"><div class="metric-label">Estoque normal</div><div class="metric-value color-green" id="metric-normal">—</div><div class="metric-sub">acima do mínimo</div></div>
-          <div class="metric-card"><div class="metric-label">Estoque baixo</div><div class="metric-value color-amber" id="metric-baixo">—</div><div class="metric-sub">atenção necessária</div></div>
-          <div class="metric-card"><div class="metric-label">Zerados</div><div class="metric-value color-red" id="metric-zerado">—</div><div class="metric-sub">reposição urgente</div></div>
+          <button type="button" class="metric-card" data-status-filter="" onclick="filtrarProdutosPorStatus('')"><div class="metric-label">Total de itens</div><div class="metric-value" id="metric-total">—</div><div class="metric-sub">produtos cadastrados</div></button>
+          <button type="button" class="metric-card" data-status-filter="Normal" onclick="filtrarProdutosPorStatus('Normal')"><div class="metric-label">Estoque normal</div><div class="metric-value color-green" id="metric-normal">—</div><div class="metric-sub">acima do mínimo</div></button>
+          <button type="button" class="metric-card" data-status-filter="Baixo" onclick="filtrarProdutosPorStatus('Baixo')"><div class="metric-label">Estoque baixo</div><div class="metric-value color-amber" id="metric-baixo">—</div><div class="metric-sub">atenção necessária</div></button>
+          <button type="button" class="metric-card" data-status-filter="Zerado" onclick="filtrarProdutosPorStatus('Zerado')"><div class="metric-label">Zerados</div><div class="metric-value color-red" id="metric-zerado">—</div><div class="metric-sub">reposição urgente</div></button>
         </div>
         <div class="toolbar">
           <input type="text" id="busca-produto" placeholder="Buscar produto..." oninput="renderProdutos()" />
@@ -2124,10 +2129,23 @@
   /* ══════════════════════════════════════════════════════
      RENDERIZAÇÃO
   ══════════════════════════════════════════════════════ */
+  function atualizarMetricasAtivas(status) {
+    document.querySelectorAll('.metric-card[data-status-filter]').forEach(card => {
+      card.classList.toggle('active', card.dataset.statusFilter === status);
+    });
+  }
+
+  function filtrarProdutosPorStatus(status) {
+    const filtro = document.getElementById('filtro-status');
+    if (filtro) filtro.value = status;
+    renderProdutos();
+  }
+
   function renderProdutos() {
     const busca = (document.getElementById('busca-produto')?.value || '').toLowerCase();
     const cat   = document.getElementById('filtro-categoria')?.value || '';
     const sts   = document.getElementById('filtro-status')?.value || '';
+    atualizarMetricasAtivas(sts);
 
     const lista = App.produtos.filter(p => {
       const st = statusProduto(p);
