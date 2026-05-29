@@ -117,3 +117,11 @@ Para habilitar fotos no cadastro e na edicao de produtos, execute este script no
 - [sql/add-produtos-foto-data-url.sql](/c:/Users/User/Desktop/Projects/SiteEstoque/sql/add-produtos-foto-data-url.sql)
 
 O site redimensiona a imagem no proprio navegador antes de salvar. A imagem original pode ter ate 6 MB e a versao salva fica otimizada para ate 220 KB.
+
+## Patrimonio e uso dos produtos
+
+Para habilitar o campo de patrimonio e o marcador "em uso", execute este script no Supabase SQL Editor:
+
+- [sql/add-produtos-patrimonio-uso.sql](/c:/Users/User/Desktop/Projects/SiteEstoque/sql/add-produtos-patrimonio-uso.sql)
+
+O marcador "em uso" e apenas informativo: ele nao altera quantidade, status de estoque nem movimentacoes.
