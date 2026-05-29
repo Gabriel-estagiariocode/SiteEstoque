@@ -838,6 +838,7 @@
             <option value="Baixo">Baixo</option>
             <option value="Zerado">Zerado</option>
           </select>
+          <button type="button" class="btn" onclick="imprimirEstoque()">Imprimir estoque</button>
         </div>
         <div class="card">
           <div class="table-wrap">
@@ -2141,18 +2142,39 @@
     renderProdutos();
   }
 
-  function renderProdutos() {
-    const busca = (document.getElementById('busca-produto')?.value || '').toLowerCase();
-    const cat   = document.getElementById('filtro-categoria')?.value || '';
-    const sts   = document.getElementById('filtro-status')?.value || '';
-    atualizarMetricasAtivas(sts);
+  function obterFiltrosProdutos() {
+    return {
+      busca: (document.getElementById('busca-produto')?.value || '').toLowerCase(),
+      categoria: document.getElementById('filtro-categoria')?.value || '',
+      status: document.getElementById('filtro-status')?.value || ''
+    };
+  }
 
-    const lista = App.produtos.filter(p => {
-      const st = statusProduto(p);
-      return (!busca || p.nome.toLowerCase().includes(busca) || (p.categoria||'').toLowerCase().includes(busca) || (p.patrimonio||'').toLowerCase().includes(busca))
-          && (!cat || p.categoria === cat)
-          && (!sts || st.label === sts);
-    });
+  function produtoPassaNosFiltros(p, filtros) {
+    const st = statusProduto(p);
+    return (!filtros.busca || p.nome.toLowerCase().includes(filtros.busca) || (p.categoria||'').toLowerCase().includes(filtros.busca) || (p.patrimonio||'').toLowerCase().includes(filtros.busca))
+        && (!filtros.categoria || p.categoria === filtros.categoria)
+        && (!filtros.status || st.label === filtros.status);
+  }
+
+  function obterProdutosFiltrados() {
+    const filtros = obterFiltrosProdutos();
+    return App.produtos.filter(p => produtoPassaNosFiltros(p, filtros));
+  }
+
+  function escapeHtml(valor) {
+    return String(valor ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function renderProdutos() {
+    const filtros = obterFiltrosProdutos();
+    atualizarMetricasAtivas(filtros.status);
+    const lista = obterProdutosFiltrados();
 
     document.getElementById('metric-total').textContent  = App.produtos.length;
     document.getElementById('metric-normal').textContent = App.produtos.filter(p => statusProduto(p).label === 'Normal').length;
@@ -2183,6 +2205,92 @@
         </div></td>
       </tr>`;
     }).join('');
+  }
+
+  function imprimirEstoque() {
+    const lista = obterProdutosFiltrados();
+    if (!lista.length) {
+      toast('Não há produtos para imprimir com os filtros atuais.', 'error');
+      return;
+    }
+
+    const filtros = obterFiltrosProdutos();
+    const filtrosTexto = [
+      filtros.busca ? `Busca: ${filtros.busca}` : '',
+      filtros.categoria ? `Categoria: ${filtros.categoria}` : 'Todas as categorias',
+      filtros.status ? `Status: ${filtros.status}` : 'Todos os status'
+    ].filter(Boolean).join(' | ');
+    const setor = App.setorAtivo && App.setorAtivo !== 'todos' ? padronizarNomeSetor(App.setorAtivo) : 'Todos os locais';
+    const emitidoPor = App.usuario?.nome || '—';
+    const linhas = lista.map(p => {
+      const st = statusProduto(p);
+      const validade = p.validade ? fmtData(p.validade) : 'Sem data';
+      return `<tr>
+        <td><strong>${escapeHtml(p.nome)}</strong>${p.patrimonio ? `<br><span>Patrimônio: ${escapeHtml(p.patrimonio)}</span>` : ''}</td>
+        <td>${escapeHtml(p.categoria || '—')}</td>
+        <td>${escapeHtml(p.qtd_atual)}</td>
+        <td>${escapeHtml(p.unidade || '—')}</td>
+        <td>${escapeHtml(validade)}</td>
+        <td>${escapeHtml(st.label)}${p.em_uso ? '<br><span>Em uso</span>' : ''}</td>
+        <td>${escapeHtml(p.local || '—')}</td>
+      </tr>`;
+    }).join('');
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(`<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Estoque - Impressão</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; color: #111827; margin: 24px; font-size: 12px; }
+    header { border-bottom: 1px solid #D1D5DB; margin-bottom: 16px; padding-bottom: 12px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .meta { color: #4B5563; line-height: 1.5; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #D1D5DB; padding: 7px 8px; text-align: left; vertical-align: top; }
+    th { background: #F3F4F6; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }
+    td span { color: #4B5563; font-size: 11px; }
+    footer { margin-top: 18px; color: #6B7280; font-size: 11px; }
+    @page { margin: 14mm; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Estoque de produtos</h1>
+    <div class="meta">Local: ${escapeHtml(setor)}</div>
+    <div class="meta">Filtros: ${escapeHtml(filtrosTexto)}</div>
+    <div class="meta">Emitido por: ${escapeHtml(emitidoPor)} em ${escapeHtml(fmtData(today()))}</div>
+  </header>
+  <table>
+    <thead>
+      <tr>
+        <th>Produto</th><th>Categoria</th><th>Qtd</th><th>Unidade</th><th>Validade</th><th>Status</th><th>Local</th>
+      </tr>
+    </thead>
+    <tbody>${linhas}</tbody>
+  </table>
+  <footer>Total impresso: ${lista.length} produto(s)</footer>
+</body>
+</html>`);
+    doc.close();
+
+    setTimeout(() => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(() => iframe.remove(), 1000);
+    }, 100);
   }
 
   function abrirDetalheProduto(id) {
