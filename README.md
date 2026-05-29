@@ -109,3 +109,11 @@ Se aparecer o erro `perfis_perfil_check` ao criar ou editar usuarios com perfil 
 Execute este script no Supabase SQL Editor:
 
 - [sql/update-perfis-perfil-check.sql](/c:/Users/User/Desktop/Projects/SiteEstoque/sql/update-perfis-perfil-check.sql)
+
+## Fotos dos produtos
+
+Para habilitar fotos no cadastro e na edicao de produtos, execute este script no Supabase SQL Editor:
+
+- [sql/add-produtos-foto-data-url.sql](/c:/Users/User/Desktop/Projects/SiteEstoque/sql/add-produtos-foto-data-url.sql)
+
+O site redimensiona a imagem no proprio navegador antes de salvar. A imagem original pode ter ate 6 MB e a versao salva fica otimizada para ate 220 KB.

@@ -493,6 +493,40 @@
 
     .info-box { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 12px; font-size: 12px; color: var(--text-muted); }
 
+    .produto-cell { display: flex; align-items: center; gap: 10px; min-width: 180px; }
+    .produto-thumb {
+      width: 38px; height: 38px; border-radius: var(--radius); object-fit: cover;
+      border: 1px solid var(--border); background: var(--surface-2); flex-shrink: 0;
+    }
+    .produto-thumb-placeholder {
+      width: 38px; height: 38px; border-radius: var(--radius); display: flex;
+      align-items: center; justify-content: center; border: 1px dashed var(--border-dark);
+      color: var(--text-faint); background: var(--surface-2); font-size: 16px; flex-shrink: 0;
+    }
+    .foto-editor {
+      display: grid; grid-template-columns: 124px 1fr; gap: 14px; align-items: start;
+      border: 1px solid var(--border); border-radius: var(--radius); padding: 12px;
+      background: var(--surface-2);
+    }
+    .foto-preview {
+      width: 124px; aspect-ratio: 1; border-radius: var(--radius); object-fit: cover;
+      border: 1px solid var(--border-dark); background: var(--surface);
+    }
+    .foto-preview-placeholder {
+      width: 124px; aspect-ratio: 1; border-radius: var(--radius); display: flex;
+      align-items: center; justify-content: center; border: 1px dashed var(--border-dark);
+      color: var(--text-faint); background: var(--surface); font-size: 28px;
+    }
+    .foto-controls { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+    .foto-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .foto-meta { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+    .foto-range-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
+    .foto-range-row input { padding: 0; }
+    .detalhe-foto {
+      width: 100%; max-height: 260px; object-fit: contain; border-radius: var(--radius);
+      border: 1px solid var(--border); background: var(--surface-2); margin-bottom: 4px;
+    }
+
     @media (max-width: 720px) {
       .theme-toggle,
       .theme-toggle-login {
@@ -503,6 +537,8 @@
       .info-grid { grid-template-columns: 1fr; }
       .info-legal-grid { grid-template-columns: 1fr; }
       .info-hero { padding: 22px; }
+      .foto-editor { grid-template-columns: 1fr; }
+      .foto-preview, .foto-preview-placeholder { width: 100%; max-height: 220px; }
     }
   
   /* Linha clicavel na tabela de produtos */
@@ -1091,6 +1127,24 @@
         <input type="text" id="prod-local" placeholder="Ex: Depósito sala 02, prateleira B" />
       </div>
       <div class="form-group">
+        <label class="form-label">Foto do produto</label>
+        <div class="foto-editor">
+          <div id="prod-foto-preview-wrap" class="foto-preview-placeholder">📷</div>
+          <div class="foto-controls">
+            <input type="file" id="prod-foto-arquivo" accept="image/jpeg,image/png,image/webp" onchange="selecionarFotoProduto(event)" />
+            <div class="foto-range-row">
+              <input type="range" id="prod-foto-largura" min="300" max="1200" step="50" value="800" oninput="atualizarFotoProduto()" />
+              <span class="text-sm text-muted" id="prod-foto-largura-label">800 px</span>
+            </div>
+            <div class="foto-actions">
+              <button type="button" class="btn btn-sm" onclick="redimensionarFotoProduto()">Redimensionar</button>
+              <button type="button" class="btn btn-sm btn-danger" onclick="removerFotoProduto()">Remover foto</button>
+            </div>
+            <div class="foto-meta" id="prod-foto-info">PNG, JPG ou WebP. Imagem original até 6 MB; salva otimizada até 220 KB.</div>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
         <label class="form-label">Observações</label>
         <textarea id="prod-obs" placeholder="Informações adicionais..."></textarea>
       </div>
@@ -1405,6 +1459,133 @@
     if (dias < 0) return { label: 'Vencido', cls: 'badge-red', dias };
     if (dias <= 30) return { label: dias === 0 ? 'Vence hoje' : 'A vencer', cls: 'badge-amber', dias };
     return { label: 'No prazo', cls: 'badge-green', dias };
+  }
+
+  const FOTO_PRODUTO_ORIGINAL_MAX_BYTES = 6 * 1024 * 1024;
+  const FOTO_PRODUTO_FINAL_MAX_BYTES = 220 * 1024;
+  const fotoProdutoState = { imagem: null, dataUrl: '' };
+
+  function bytesDataUrl(dataUrl) {
+    if (!dataUrl) return 0;
+    const base64 = dataUrl.split(',')[1] || '';
+    return Math.round((base64.length * 3) / 4);
+  }
+
+  function formatBytes(bytes) {
+    if (!bytes) return '0 KB';
+    if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  function fotoProdutoSegura(dataUrl) {
+    return /^data:image\/(jpeg|jpg|png|webp);base64,/i.test(dataUrl || '');
+  }
+
+  function renderFotoProdutoPreview() {
+    const wrap = document.getElementById('prod-foto-preview-wrap');
+    const info = document.getElementById('prod-foto-info');
+    if (!wrap || !info) return;
+
+    if (fotoProdutoSegura(fotoProdutoState.dataUrl)) {
+      wrap.className = '';
+      wrap.innerHTML = `<img class="foto-preview" src="${fotoProdutoState.dataUrl}" alt="Prévia da foto do produto">`;
+      info.textContent = `Foto pronta para salvar: ${formatBytes(bytesDataUrl(fotoProdutoState.dataUrl))}.`;
+      return;
+    }
+
+    wrap.className = 'foto-preview-placeholder';
+    wrap.textContent = '📷';
+    info.textContent = 'PNG, JPG ou WebP. Imagem original até 6 MB; salva otimizada até 220 KB.';
+  }
+
+  function resetFotoProduto(dataUrl = '') {
+    fotoProdutoState.imagem = null;
+    fotoProdutoState.dataUrl = fotoProdutoSegura(dataUrl) ? dataUrl : '';
+    const input = document.getElementById('prod-foto-arquivo');
+    const largura = document.getElementById('prod-foto-largura');
+    const label = document.getElementById('prod-foto-largura-label');
+    if (input) input.value = '';
+    if (largura) largura.value = '800';
+    if (label) label.textContent = '800 px';
+    renderFotoProdutoPreview();
+  }
+
+  function comprimirFotoProduto(imagem, maxDimensao) {
+    const escala = Math.min(1, maxDimensao / Math.max(imagem.naturalWidth, imagem.naturalHeight));
+    const largura = Math.max(1, Math.round(imagem.naturalWidth * escala));
+    const altura = Math.max(1, Math.round(imagem.naturalHeight * escala));
+    const canvas = document.createElement('canvas');
+    canvas.width = largura;
+    canvas.height = altura;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(imagem, 0, 0, largura, altura);
+
+    let qualidade = 0.86;
+    let dataUrl = canvas.toDataURL('image/jpeg', qualidade);
+    while (bytesDataUrl(dataUrl) > FOTO_PRODUTO_FINAL_MAX_BYTES && qualidade > 0.45) {
+      qualidade -= 0.08;
+      dataUrl = canvas.toDataURL('image/jpeg', qualidade);
+    }
+    return dataUrl;
+  }
+
+  function redimensionarFotoProduto() {
+    const largura = parseInt(document.getElementById('prod-foto-largura')?.value, 10) || 800;
+    const label = document.getElementById('prod-foto-largura-label');
+    if (label) label.textContent = `${largura} px`;
+    if (!fotoProdutoState.imagem) return;
+
+    const dataUrl = comprimirFotoProduto(fotoProdutoState.imagem, largura);
+    if (bytesDataUrl(dataUrl) > FOTO_PRODUTO_FINAL_MAX_BYTES) {
+      toast('A foto ainda ficou grande. Reduza a largura e tente novamente.', 'error');
+      return;
+    }
+    fotoProdutoState.dataUrl = dataUrl;
+    renderFotoProdutoPreview();
+  }
+
+  function atualizarFotoProduto() {
+    const largura = parseInt(document.getElementById('prod-foto-largura')?.value, 10) || 800;
+    const label = document.getElementById('prod-foto-largura-label');
+    if (label) label.textContent = `${largura} px`;
+    if (fotoProdutoState.imagem) redimensionarFotoProduto();
+  }
+
+  function selecionarFotoProduto(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!/^image\/(jpeg|png|webp)$/i.test(file.type)) {
+      toast('Use uma imagem PNG, JPG ou WebP.', 'error');
+      event.target.value = '';
+      return;
+    }
+    if (file.size > FOTO_PRODUTO_ORIGINAL_MAX_BYTES) {
+      toast(`A imagem original deve ter até ${formatBytes(FOTO_PRODUTO_ORIGINAL_MAX_BYTES)}.`, 'error');
+      event.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const imagem = new Image();
+      imagem.onload = () => {
+        fotoProdutoState.imagem = imagem;
+        redimensionarFotoProduto();
+      };
+      imagem.onerror = () => toast('Não foi possível carregar a imagem selecionada.', 'error');
+      imagem.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removerFotoProduto() {
+    resetFotoProduto('');
+  }
+
+  function fotoProdutoThumbHtml(p) {
+    return fotoProdutoSegura(p.foto_data_url)
+      ? `<img class="produto-thumb" src="${p.foto_data_url}" alt="">`
+      : '<span class="produto-thumb-placeholder">📷</span>';
   }
 
   function perfilBadge(perfil) {
@@ -1924,7 +2105,7 @@
       const st = statusProduto(p);
       const validade = statusValidade(p);
       return `<tr class="tr-clicavel" onclick="abrirDetalheProduto(${p.id})" title="Clique para mais detalhes">
-        <td class="font-semi">${p.nome}</td>
+        <td><div class="produto-cell">${fotoProdutoThumbHtml(p)}<span class="font-semi">${p.nome}</span></div></td>
         <td><span class="badge badge-gray">${p.categoria || '—'}</span></td>
         <td class="font-semi">${p.qtd_atual}</td>
         <td class="text-muted">${p.unidade || '—'}</td>
@@ -1956,6 +2137,12 @@
     document.getElementById('detalhe-setor').textContent       = p.setor  || '—';
     document.getElementById('detalhe-criado-por').textContent  = p.criado_por || '—';
     document.getElementById('detalhe-obs').textContent         = p.obs || '—';
+    const fotoWrap = document.getElementById('detalhe-foto-wrap');
+    if (fotoWrap) {
+      fotoWrap.innerHTML = fotoProdutoSegura(p.foto_data_url)
+        ? `<img class="detalhe-foto" src="${p.foto_data_url}" alt="Foto do produto">`
+        : '';
+    }
     openModal('modal-detalhe-produto');
   }
 
@@ -2074,6 +2261,7 @@
     document.getElementById('prod-unidade').value   = '';
     document.getElementById('prod-qtd').value       = '0';
     document.getElementById('prod-qtd-min').value   = '5';
+    resetFotoProduto('');
     document.getElementById('modal-produto-title').textContent = 'Novo produto';
     openModal('modal-produto');
   }
@@ -2090,6 +2278,7 @@
     document.getElementById('prod-validade').value  = normalizarDataISO(p.validade);
     document.getElementById('prod-local').value     = p.local || '';
     document.getElementById('prod-obs').value       = p.obs   || '';
+    resetFotoProduto(p.foto_data_url || '');
     document.getElementById('modal-produto-title').textContent = 'Editar produto';
     openModal('modal-produto');
   }
@@ -2195,7 +2384,18 @@
     const btn = document.getElementById('btn-salvar-produto');
     btn.disabled = true; btn.textContent = 'Salvando...';
 
-    const payload = { nome, categoria: cat, unidade: unid, qtd_atual: qtd, qtd_minima: qtdMin, validade, local: local || null, obs: obs || null, atualizado_em: new Date().toISOString() };
+    const payload = {
+      nome,
+      categoria: cat,
+      unidade: unid,
+      qtd_atual: qtd,
+      qtd_minima: qtdMin,
+      validade,
+      local: local || null,
+      obs: obs || null,
+      foto_data_url: fotoProdutoState.dataUrl || null,
+      atualizado_em: new Date().toISOString()
+    };
     const { error } = id
       ? await db.from('produtos').update(payload).eq('id', id)
       : await db.from('produtos').insert({ ...payload, criado_por: App.usuario.nome, setor: App.usuario.escola });
@@ -2784,6 +2984,7 @@ async function salvarUsuario() {
       <button class="btn btn-icon" onclick="closeModal('modal-detalhe-produto')">&#x2715;</button>
     </div>
     <div class="modal-body">
+      <div id="detalhe-foto-wrap"></div>
       <div class="detalhe-grid">
         <div class="detalhe-item">
           <span class="detalhe-label">Quantidade Atual</span>
