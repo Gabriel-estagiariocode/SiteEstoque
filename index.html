@@ -522,17 +522,20 @@
     .foto-meta { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
     .foto-range-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
     .foto-range-row input { padding: 0; }
-    #prod-foto-arquivo {
-      border: 1px solid var(--border-dark); border-radius: var(--radius);
-      background: var(--surface); color: var(--text); padding: 7px;
-    }
-    #prod-foto-arquivo::file-selector-button {
+    .foto-file-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    #prod-foto-arquivo { display: none; }
+    .foto-file-button {
+      display: inline-flex; align-items: center; justify-content: center; white-space: nowrap;
       font-family: var(--font); font-size: 12px; font-weight: 600;
-      margin-right: 10px; padding: 6px 10px; border: 1px solid var(--accent);
+      padding: 7px 11px; border: 1px solid var(--accent);
       border-radius: var(--radius); background: var(--accent); color: var(--accent-text);
       cursor: pointer;
     }
-    #prod-foto-arquivo::file-selector-button:hover { filter: brightness(.95); }
+    .foto-file-button:hover { filter: brightness(.95); }
+    .foto-file-name {
+      color: var(--text-muted); font-size: 12px; line-height: 1.4;
+      overflow-wrap: anywhere; min-width: 0;
+    }
     .detalhe-foto {
       width: 100%; max-height: 260px; object-fit: contain; border-radius: var(--radius);
       border: 1px solid var(--border); background: var(--surface-2); margin-bottom: 4px;
@@ -1142,7 +1145,11 @@
         <div class="foto-editor">
           <div id="prod-foto-preview-wrap" class="foto-preview-placeholder">📷</div>
           <div class="foto-controls">
-            <input type="file" id="prod-foto-arquivo" accept="image/jpeg,image/png,image/webp" onchange="selecionarFotoProduto(event)" />
+            <div class="foto-file-row">
+              <label class="foto-file-button" for="prod-foto-arquivo">Escolher arquivo</label>
+              <span class="foto-file-name" id="prod-foto-nome">Nenhum arquivo escolhido</span>
+              <input type="file" id="prod-foto-arquivo" accept="image/jpeg,image/png,image/webp" onchange="selecionarFotoProduto(event)" />
+            </div>
             <div class="foto-range-row">
               <input type="range" id="prod-foto-largura" min="300" max="1200" step="50" value="800" oninput="atualizarFotoProduto()" />
               <span class="text-sm text-muted" id="prod-foto-largura-label">800 px</span>
@@ -1514,9 +1521,11 @@
     const input = document.getElementById('prod-foto-arquivo');
     const largura = document.getElementById('prod-foto-largura');
     const label = document.getElementById('prod-foto-largura-label');
+    const nomeArquivo = document.getElementById('prod-foto-nome');
     if (input) input.value = '';
     if (largura) largura.value = '800';
     if (label) label.textContent = '800 px';
+    if (nomeArquivo) nomeArquivo.textContent = fotoProdutoState.dataUrl ? 'Foto atual do produto' : 'Nenhum arquivo escolhido';
     renderFotoProdutoPreview();
   }
 
@@ -1564,16 +1573,20 @@
   function selecionarFotoProduto(event) {
     const file = event.target.files?.[0];
     if (!file) return;
+    const nomeArquivo = document.getElementById('prod-foto-nome');
     if (!/^image\/(jpeg|png|webp)$/i.test(file.type)) {
       toast('Use uma imagem PNG, JPG ou WebP.', 'error');
       event.target.value = '';
+      if (nomeArquivo) nomeArquivo.textContent = 'Nenhum arquivo escolhido';
       return;
     }
     if (file.size > FOTO_PRODUTO_ORIGINAL_MAX_BYTES) {
       toast(`A imagem original deve ter até ${formatBytes(FOTO_PRODUTO_ORIGINAL_MAX_BYTES)}.`, 'error');
       event.target.value = '';
+      if (nomeArquivo) nomeArquivo.textContent = 'Nenhum arquivo escolhido';
       return;
     }
+    if (nomeArquivo) nomeArquivo.textContent = file.name;
 
     const reader = new FileReader();
     reader.onload = () => {
