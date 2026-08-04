@@ -143,45 +143,6 @@
     .metric-value { font-size: 26px; font-weight: 600; line-height: 1.2; margin-top: 4px; }
     .metric-sub   { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
 
-    .produto-tabs {
-      display: inline-flex;
-      gap: 4px;
-      padding: 4px;
-      margin-bottom: 14px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      background: var(--surface);
-      box-shadow: var(--shadow);
-    }
-    .produto-tab {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border: 0;
-      border-radius: var(--radius);
-      background: transparent;
-      color: var(--text-muted);
-      font-family: var(--font);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background .15s, color .15s;
-      white-space: nowrap;
-    }
-    .produto-tab:hover { background: var(--surface-2); color: var(--text); }
-    .produto-tab.active { background: var(--green-bg); color: var(--green); }
-    .produto-tab-count {
-      min-width: 22px;
-      padding: 2px 6px;
-      border-radius: 999px;
-      background: var(--surface-2);
-      color: var(--text-muted);
-      font-size: 11px;
-      text-align: center;
-    }
-    .produto-tab.active .produto-tab-count { background: var(--surface); color: var(--green); }
-
     .table-wrap { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
     thead th { padding: 9px 10px; text-align: left; font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; background: var(--surface-2); border-bottom: 1px solid var(--border); white-space: nowrap; }
@@ -797,7 +758,10 @@
     <nav class="sidebar-nav">
       <div class="sidebar-section-label">Principal</div>
       <button class="nav-item active" data-tab="produtos" onclick="switchTab('produtos',this)">
-        <span class="nav-icon">&#128230;</span> Produtos
+        <span class="nav-icon">&#128230;</span> Produtos (estoque)
+      </button>
+      <button class="nav-item" data-tab="produtos-uso" onclick="switchTab('produtos-uso',this)">
+        <span class="nav-icon">&#128736;</span> Produtos em uso
       </button>
       <button class="nav-item" data-tab="movimentacoes" onclick="switchTab('movimentacoes',this)">
         <span class="nav-icon">&harr;</span> Movimenta&ccedil;&otilde;es
@@ -858,16 +822,6 @@
             <option value="todos">Todos os locais</option>
           </select>
         </div>
-        <div class="produto-tabs" role="tablist" aria-label="Visualização de produtos">
-          <button type="button" class="produto-tab active" data-produto-aba="estoque" onclick="alternarAbaProdutos('estoque')">
-            <span>Produtos (estoque)</span>
-            <span class="produto-tab-count" id="count-produtos-estoque">—</span>
-          </button>
-          <button type="button" class="produto-tab" data-produto-aba="uso" onclick="alternarAbaProdutos('uso')">
-            <span>Produtos em uso</span>
-            <span class="produto-tab-count" id="count-produtos-uso">—</span>
-          </button>
-        </div>
         <div class="metrics-grid">
           <button type="button" class="metric-card" data-status-filter="" onclick="filtrarProdutosPorStatus('')"><div class="metric-label">Total de itens</div><div class="metric-value" id="metric-total">—</div><div class="metric-sub">produtos cadastrados</div></button>
           <button type="button" class="metric-card" data-status-filter="Normal" onclick="filtrarProdutosPorStatus('Normal')"><div class="metric-label">Estoque normal</div><div class="metric-value color-green" id="metric-normal">—</div><div class="metric-sub">acima do mínimo</div></button>
@@ -899,6 +853,50 @@
               </thead>
               <tbody id="tbody-produtos">
                 <tr><td colspan="11" style="text-align:center;padding:32px;color:var(--text-faint)">Carregando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PRODUTOS EM USO -->
+    <section id="tab-produtos-uso" class="tab-section hidden">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Produtos em uso</div>
+          <div class="page-sub">Itens alocados ou sendo utilizados, sem controle de estoque mínimo</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-primary" id="btn-novo-produto-uso" onclick="abrirModalNovoProduto(true)">+ Novo produto em uso</button>
+        </div>
+      </div>
+      <div class="page-body">
+        <div id="setor-selector-produtos-uso" class="hidden" style="margin-bottom:12px;display:flex;align-items:center;gap:10px">
+          <label style="font-size:13px;font-weight:500;color:var(--text-muted);white-space:nowrap">&#127968; Local:</label>
+          <select id="select-setor-produtos-uso" onchange="mudarSetor(this.value)" style="max-width:260px">
+            <option value="todos">Todos os locais</option>
+          </select>
+        </div>
+        <div class="toolbar">
+          <input type="text" id="busca-produto-uso" placeholder="Buscar produto em uso..." oninput="renderProdutosUso()" />
+          <select id="filtro-categoria-uso" onchange="renderProdutosUso()">
+            <option value="">Todas as categorias</option>
+            <option>Papelaria</option><option>Limpeza</option><option>Higiene</option>
+            <option>Informática</option><option>Didático</option><option>Outros</option>
+          </select>
+          <button type="button" class="btn" onclick="imprimirProdutosUso()">Imprimir produtos em uso</button>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Produto</th><th>Categoria</th><th>Quantidade</th><th>Unidade</th><th>Patrimônio</th><th>Local</th><th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-produtos-uso">
+                <tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-faint)">Carregando...</td></tr>
               </tbody>
             </table>
           </div>
@@ -1182,10 +1180,10 @@
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">Quantidade inicial</label>
+          <label class="form-label" id="prod-qtd-label">Quantidade inicial</label>
           <input type="number" id="prod-qtd" min="0" value="0" />
         </div>
-        <div class="form-group">
+        <div class="form-group" id="prod-qtd-min-group">
           <label class="form-label">Quantidade mínima</label>
           <input type="number" id="prod-qtd-min" min="0" value="5" />
         </div>
@@ -1211,7 +1209,7 @@
         </div>
       </div>
       <div class="checkbox-row">
-        <input type="checkbox" id="prod-em-uso" />
+        <input type="checkbox" id="prod-em-uso" onchange="atualizarCamposProdutoUso()" />
         <div>
           <label for="prod-em-uso">Item em uso</label>
           <span>Marca produtos que estão alocados ou sendo utilizados, sem alterar o saldo do estoque.</span>
@@ -1493,7 +1491,6 @@
     movimentacoes: [],
     usuarios:      [],
     setorAtivo:    null,
-    produtosAbaAtiva: 'estoque',
   };
   let inactivityIntervalId = null;
   let autoRefreshIntervalId = null;
@@ -1946,12 +1943,13 @@
   function togglePermUI() {
     const show = (id, cond) => { const el = document.getElementById(id); if (el) el.style.display = cond ? '' : 'none'; };
     show('btn-novo-produto', perm('editarProdutos'));
+    show('btn-novo-produto-uso', perm('editarProdutos'));
     show('btn-nova-entrada', perm('registrarMov'));
     show('btn-nova-saida',   perm('registrarMov'));
     show('btn-novo-usuario', perm('gerirUsuarios'));
     // Seletores de setor: apenas admin ve
     const isAdmin = App.usuario?.perfil === 'administrador';
-    ['setor-selector-produtos', 'setor-selector-mov'].forEach(id => {
+    ['setor-selector-produtos', 'setor-selector-produtos-uso', 'setor-selector-mov'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = isAdmin ? 'flex' : 'none';
     });
@@ -1997,16 +1995,20 @@
       todosSetores.map(s => `<option value="${s}">${s}</option>`).join('');
 
     document.getElementById('select-setor-produtos').innerHTML = opts;
+    document.getElementById('select-setor-produtos-uso').innerHTML = opts;
     document.getElementById('select-setor-mov').innerHTML = opts;
 
     // Restaura o valor selecionado apos reconstruir o innerHTML
     const valorAtivo = App.setorAtivo || 'todos';
     document.getElementById('select-setor-produtos').value = valorAtivo;
+    document.getElementById('select-setor-produtos-uso').value = valorAtivo;
     document.getElementById('select-setor-mov').value = valorAtivo;
 
     // Exibe os seletores
     document.getElementById('setor-selector-produtos').classList.remove('hidden');
     document.getElementById('setor-selector-produtos').style.display = 'flex';
+    document.getElementById('setor-selector-produtos-uso').classList.remove('hidden');
+    document.getElementById('setor-selector-produtos-uso').style.display = 'flex';
     document.getElementById('setor-selector-mov').classList.remove('hidden');
     document.getElementById('setor-selector-mov').style.display = 'flex';
   }
@@ -2015,6 +2017,7 @@
     App.setorAtivo = setor;
     // Sincroniza os dois selects sem reinicializar as opcoes
     document.getElementById('select-setor-produtos').value = setor;
+    document.getElementById('select-setor-produtos-uso').value = setor;
     document.getElementById('select-setor-mov').value = setor;
     // Recarrega apenas os dados (nao chama inicializarSetores para nao resetar o select)
     await carregarProdutos();
@@ -2120,6 +2123,7 @@
     if (error) { if (!silent) toast('Erro ao carregar produtos: ' + error.message, 'error'); return; }
     App.produtos = data || [];
     renderProdutos();
+    renderProdutosUso();
     renderVencimentos();
   }
 
@@ -2192,31 +2196,6 @@
     renderProdutos();
   }
 
-  function produtoEstaNaAbaAtiva(p) {
-    return App.produtosAbaAtiva === 'uso' ? Boolean(p.em_uso) : !p.em_uso;
-  }
-
-  function obterProdutosDaAbaAtiva() {
-    return App.produtos.filter(produtoEstaNaAbaAtiva);
-  }
-
-  function atualizarAbasProdutos() {
-    const totalEstoque = App.produtos.filter(p => !p.em_uso).length;
-    const totalUso = App.produtos.filter(p => p.em_uso).length;
-    const countEstoque = document.getElementById('count-produtos-estoque');
-    const countUso = document.getElementById('count-produtos-uso');
-    if (countEstoque) countEstoque.textContent = totalEstoque;
-    if (countUso) countUso.textContent = totalUso;
-    document.querySelectorAll('.produto-tab[data-produto-aba]').forEach(tab => {
-      tab.classList.toggle('active', tab.dataset.produtoAba === App.produtosAbaAtiva);
-    });
-  }
-
-  function alternarAbaProdutos(aba) {
-    App.produtosAbaAtiva = aba === 'uso' ? 'uso' : 'estoque';
-    renderProdutos();
-  }
-
   function obterFiltrosProdutos() {
     return {
       busca: (document.getElementById('busca-produto')?.value || '').toLowerCase(),
@@ -2234,7 +2213,17 @@
 
   function obterProdutosFiltrados() {
     const filtros = obterFiltrosProdutos();
-    return obterProdutosDaAbaAtiva().filter(p => produtoPassaNosFiltros(p, filtros));
+    return App.produtos.filter(p => !p.em_uso && produtoPassaNosFiltros(p, filtros));
+  }
+
+  function obterProdutosUsoFiltrados() {
+    const busca = (document.getElementById('busca-produto-uso')?.value || '').toLowerCase();
+    const categoria = document.getElementById('filtro-categoria-uso')?.value || '';
+    return App.produtos.filter(p => {
+      return p.em_uso
+        && (!busca || p.nome.toLowerCase().includes(busca) || (p.categoria||'').toLowerCase().includes(busca) || (p.patrimonio||'').toLowerCase().includes(busca) || (p.local||'').toLowerCase().includes(busca))
+        && (!categoria || p.categoria === categoria);
+    });
   }
 
   function escapeHtml(valor) {
@@ -2249,35 +2238,25 @@
   function renderProdutos() {
     const filtros = obterFiltrosProdutos();
     atualizarMetricasAtivas(filtros.status);
-    atualizarAbasProdutos();
-    const produtosDaAba = obterProdutosDaAbaAtiva();
+    const produtosEstoque = App.produtos.filter(p => !p.em_uso);
     const lista = obterProdutosFiltrados();
-    const exibindoUso = App.produtosAbaAtiva === 'uso';
-    const pageTitle = document.getElementById('produtos-page-title');
-    const pageSub = document.getElementById('produtos-page-sub');
-    if (pageTitle) pageTitle.textContent = exibindoUso ? 'Produtos em uso' : 'Produtos em estoque';
-    if (pageSub) pageSub.textContent = exibindoUso
-      ? 'Itens alocados ou sendo utilizados'
-      : 'Cadastro, quantidades e status dos itens disponíveis';
 
-    document.getElementById('metric-total').textContent  = produtosDaAba.length;
-    document.getElementById('metric-normal').textContent = produtosDaAba.filter(p => statusProduto(p).label === 'Normal').length;
-    document.getElementById('metric-baixo').textContent  = produtosDaAba.filter(p => statusProduto(p).label === 'Baixo').length;
-    document.getElementById('metric-zerado').textContent = produtosDaAba.filter(p => statusProduto(p).label === 'Zerado').length;
+    document.getElementById('metric-total').textContent  = produtosEstoque.length;
+    document.getElementById('metric-normal').textContent = produtosEstoque.filter(p => statusProduto(p).label === 'Normal').length;
+    document.getElementById('metric-baixo').textContent  = produtosEstoque.filter(p => statusProduto(p).label === 'Baixo').length;
+    document.getElementById('metric-zerado').textContent = produtosEstoque.filter(p => statusProduto(p).label === 'Zerado').length;
 
     const tbody = document.getElementById('tbody-produtos');
     if (!lista.length) {
-      const msg = exibindoUso ? 'Nenhum produto em uso encontrado.' : 'Nenhum produto em estoque encontrado.';
-      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🗃</div><p>${msg}</p></div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🗃</div><p>Nenhum produto em estoque encontrado.</p></div></td></tr>`;
       return;
     }
     tbody.innerHTML = lista.map(p => {
       const st = statusProduto(p);
       const validade = statusValidade(p);
-      const usoBadge = p.em_uso ? '<span class="badge badge-purple">Em uso</span>' : '';
       const patrimonioLinha = p.patrimonio ? `<span class="text-sm text-muted">Patrimônio: ${p.patrimonio}</span>` : '';
       return `<tr class="tr-clicavel" onclick="abrirDetalheProduto(${p.id})" title="Clique para mais detalhes">
-        <td><div class="produto-cell">${fotoProdutoThumbHtml(p)}<div class="produto-info"><div class="produto-name-row"><span class="font-semi">${p.nome}</span>${usoBadge}</div>${patrimonioLinha}</div></div></td>
+        <td><div class="produto-cell">${fotoProdutoThumbHtml(p)}<div class="produto-info"><div class="produto-name-row"><span class="font-semi">${p.nome}</span></div>${patrimonioLinha}</div></div></td>
         <td><span class="badge badge-gray">${p.categoria || '—'}</span></td>
         <td class="font-semi">${p.qtd_atual}</td>
         <td class="text-muted">${p.unidade || '—'}</td>
@@ -2292,6 +2271,30 @@
     }).join('');
   }
 
+  function renderProdutosUso() {
+    const lista = obterProdutosUsoFiltrados();
+    const tbody = document.getElementById('tbody-produtos-uso');
+    if (!tbody) return;
+    if (!lista.length) {
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🛠</div><p>Nenhum produto em uso encontrado.</p></div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = lista.map(p => {
+      return `<tr class="tr-clicavel" onclick="abrirDetalheProduto(${p.id})" title="Clique para mais detalhes">
+        <td><div class="produto-cell">${fotoProdutoThumbHtml(p)}<div class="produto-info"><div class="produto-name-row"><span class="font-semi">${p.nome}</span><span class="badge badge-purple">Em uso</span></div>${p.obs ? `<span class="text-sm text-muted">${p.obs}</span>` : ''}</div></div></td>
+        <td><span class="badge badge-gray">${p.categoria || '—'}</span></td>
+        <td class="font-semi">${p.qtd_atual}</td>
+        <td class="text-muted">${p.unidade || '—'}</td>
+        <td class="text-muted">${p.patrimonio || '—'}</td>
+        <td class="text-muted">${p.local || '—'}</td>
+        <td class="actions-cell" onclick="event.stopPropagation()"><div class="flex gap-8">
+          ${perm('editarProdutos') ? `<button class="btn btn-xs" onclick="abrirModalEditarProduto(${p.id})">Editar</button>` : ''}
+          ${perm('editarProdutos') ? `<button class="btn btn-xs btn-danger" onclick="abrirModalExcluirProduto(${p.id})">Excluir</button>` : ''}
+        </div></td>
+      </tr>`;
+    }).join('');
+  }
+
   function imprimirEstoque() {
     const lista = obterProdutosFiltrados();
     if (!lista.length) {
@@ -2300,9 +2303,7 @@
     }
 
     const filtros = obterFiltrosProdutos();
-    const nomeAba = App.produtosAbaAtiva === 'uso' ? 'Produtos em uso' : 'Produtos em estoque';
     const filtrosTexto = [
-      `Aba: ${nomeAba}`,
       filtros.busca ? `Busca: ${filtros.busca}` : '',
       filtros.categoria ? `Categoria: ${filtros.categoria}` : 'Todas as categorias',
       filtros.status ? `Status: ${filtros.status}` : 'Todos os status'
@@ -2355,7 +2356,7 @@
 </head>
 <body>
   <header>
-    <h1>${escapeHtml(nomeAba)}</h1>
+    <h1>Produtos em estoque</h1>
     <div class="meta">Local: ${escapeHtml(setor)}</div>
     <div class="meta">Filtros: ${escapeHtml(filtrosTexto)}</div>
     <div class="meta">Emitido por: ${escapeHtml(emitidoPor)} em ${escapeHtml(fmtData(today()))}</div>
@@ -2380,6 +2381,89 @@
     }, 100);
   }
 
+  function imprimirProdutosUso() {
+    const lista = obterProdutosUsoFiltrados();
+    if (!lista.length) {
+      toast('Não há produtos em uso para imprimir com os filtros atuais.', 'error');
+      return;
+    }
+
+    const busca = (document.getElementById('busca-produto-uso')?.value || '').toLowerCase();
+    const categoria = document.getElementById('filtro-categoria-uso')?.value || '';
+    const filtrosTexto = [
+      busca ? `Busca: ${busca}` : '',
+      categoria ? `Categoria: ${categoria}` : 'Todas as categorias'
+    ].filter(Boolean).join(' | ');
+    const setor = App.setorAtivo && App.setorAtivo !== 'todos' ? padronizarNomeSetor(App.setorAtivo) : 'Todos os locais';
+    const emitidoPor = App.usuario?.nome || '—';
+    const linhas = lista.map(p => {
+      return `<tr>
+        <td><strong>${escapeHtml(p.nome)}</strong>${p.obs ? `<br><span>${escapeHtml(p.obs)}</span>` : ''}</td>
+        <td>${escapeHtml(p.categoria || '—')}</td>
+        <td>${escapeHtml(p.qtd_atual)}</td>
+        <td>${escapeHtml(p.unidade || '—')}</td>
+        <td>${escapeHtml(p.patrimonio || '—')}</td>
+        <td>${escapeHtml(p.local || '—')}</td>
+      </tr>`;
+    }).join('');
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(`<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Produtos em uso - Impressão</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; color: #111827; margin: 24px; font-size: 12px; }
+    header { border-bottom: 1px solid #D1D5DB; margin-bottom: 16px; padding-bottom: 12px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .meta { color: #4B5563; line-height: 1.5; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #D1D5DB; padding: 7px 8px; text-align: left; vertical-align: top; }
+    th { background: #F3F4F6; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }
+    td span { color: #4B5563; font-size: 11px; }
+    footer { margin-top: 18px; color: #6B7280; font-size: 11px; }
+    @page { margin: 14mm; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Produtos em uso</h1>
+    <div class="meta">Local: ${escapeHtml(setor)}</div>
+    <div class="meta">Filtros: ${escapeHtml(filtrosTexto)}</div>
+    <div class="meta">Emitido por: ${escapeHtml(emitidoPor)} em ${escapeHtml(fmtData(today()))}</div>
+  </header>
+  <table>
+    <thead>
+      <tr>
+        <th>Produto</th><th>Categoria</th><th>Qtd</th><th>Unidade</th><th>Patrimônio</th><th>Local</th>
+      </tr>
+    </thead>
+    <tbody>${linhas}</tbody>
+  </table>
+  <footer>Total impresso: ${lista.length} produto(s)</footer>
+</body>
+</html>`);
+    doc.close();
+
+    setTimeout(() => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(() => iframe.remove(), 1000);
+    }, 100);
+  }
+
   function abrirDetalheProduto(id) {
     const p = App.produtos.find(x => x.id === id);
     if (!p) return;
@@ -2387,7 +2471,7 @@
     const validade = statusValidade(p);
     document.getElementById('detalhe-nome').textContent        = p.nome;
     document.getElementById('detalhe-categoria').textContent   = p.categoria || '—';
-    document.getElementById('detalhe-qtd-atual').innerHTML     = `${p.qtd_atual} <span class="badge ${st.cls}" style="margin-left:6px">${st.label}</span>`;
+    document.getElementById('detalhe-qtd-atual').innerHTML     = p.em_uso ? p.qtd_atual : `${p.qtd_atual} <span class="badge ${st.cls}" style="margin-left:6px">${st.label}</span>`;
     document.getElementById('detalhe-qtd-minima').textContent  = p.qtd_minima ?? '—';
     document.getElementById('detalhe-unidade').textContent     = p.unidade || '—';
     document.getElementById('detalhe-validade').innerHTML      = `<span class="badge ${validade.cls}">${validade.label === 'Sem validade' ? 'Sem data' : fmtData(p.validade)}</span>`;
@@ -2399,6 +2483,10 @@
     document.getElementById('detalhe-setor').textContent       = p.setor  || '—';
     document.getElementById('detalhe-criado-por').textContent  = p.criado_por || '—';
     document.getElementById('detalhe-obs').textContent         = p.obs || '—';
+    ['detalhe-qtd-minima-item', 'detalhe-mov-divider', 'detalhe-ultima-entrada-item', 'detalhe-ultima-saida-item'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = p.em_uso ? 'none' : '';
+    });
     const fotoWrap = document.getElementById('detalhe-foto-wrap');
     if (fotoWrap) {
       fotoWrap.innerHTML = fotoProdutoSegura(p.foto_data_url)
@@ -2413,7 +2501,7 @@
     const lista = App.produtos
       .filter(p => {
         const dias = diasAteValidade(p.validade);
-        return dias !== null && dias <= 30;
+        return !p.em_uso && dias !== null && dias <= 30;
       })
       .sort((a, b) => diasAteValidade(a.validade) - diasAteValidade(b.validade));
 
@@ -2517,15 +2605,27 @@
   /* ══════════════════════════════════════════════════════
      PRODUTOS — CRUD
   ══════════════════════════════════════════════════════ */
-  function abrirModalNovoProduto() {
+  function atualizarCamposProdutoUso() {
+    const emUso = document.getElementById('prod-em-uso')?.checked;
+    const qtdMinGroup = document.getElementById('prod-qtd-min-group');
+    const qtdMinInput = document.getElementById('prod-qtd-min');
+    const qtdLabel = document.getElementById('prod-qtd-label');
+    if (qtdMinGroup) qtdMinGroup.style.display = emUso ? 'none' : '';
+    if (emUso && qtdMinInput) qtdMinInput.value = '0';
+    if (!emUso && qtdMinInput && (!qtdMinInput.value || qtdMinInput.value === '0')) qtdMinInput.value = '5';
+    if (qtdLabel) qtdLabel.textContent = emUso ? 'Quantidade' : 'Quantidade inicial';
+  }
+
+  function abrirModalNovoProduto(emUsoInicial = false) {
     ['prod-id','prod-nome','prod-local','prod-patrimonio','prod-obs','prod-validade'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('prod-categoria').value = '';
     document.getElementById('prod-unidade').value   = '';
     document.getElementById('prod-qtd').value       = '0';
-    document.getElementById('prod-qtd-min').value   = '5';
-    document.getElementById('prod-em-uso').checked   = false;
+    document.getElementById('prod-qtd-min').value   = emUsoInicial ? '0' : '5';
+    document.getElementById('prod-em-uso').checked   = Boolean(emUsoInicial);
+    atualizarCamposProdutoUso();
     resetFotoProduto('');
-    document.getElementById('modal-produto-title').textContent = 'Novo produto';
+    document.getElementById('modal-produto-title').textContent = emUsoInicial ? 'Novo produto em uso' : 'Novo produto';
     openModal('modal-produto');
   }
 
@@ -2542,6 +2642,7 @@
     document.getElementById('prod-local').value     = p.local || '';
     document.getElementById('prod-patrimonio').value = p.patrimonio || '';
     document.getElementById('prod-em-uso').checked   = Boolean(p.em_uso);
+    atualizarCamposProdutoUso();
     document.getElementById('prod-obs').value       = p.obs   || '';
     resetFotoProduto(p.foto_data_url || '');
     document.getElementById('modal-produto-title').textContent = 'Editar produto';
@@ -2639,11 +2740,11 @@
     const cat    = document.getElementById('prod-categoria').value;
     const unid   = document.getElementById('prod-unidade').value;
     const qtd    = parseInt(document.getElementById('prod-qtd').value)     || 0;
-    const qtdMin = parseInt(document.getElementById('prod-qtd-min').value) || 5;
     const validade = document.getElementById('prod-validade').value || null;
     const local  = document.getElementById('prod-local').value.trim();
     const patrimonio = document.getElementById('prod-patrimonio').value.trim();
     const emUso = document.getElementById('prod-em-uso').checked;
+    const qtdMin = emUso ? 0 : (parseInt(document.getElementById('prod-qtd-min').value) || 5);
     const obs    = document.getElementById('prod-obs').value.trim();
 
     if (!nome || !cat || !unid) { toast('Preencha os campos obrigatórios.', 'error'); return; }
@@ -2675,8 +2776,8 @@
 
     toast(id ? 'Produto atualizado!' : 'Produto cadastrado!', 'success');
     closeModal('modal-produto');
-    App.produtosAbaAtiva = emUso ? 'uso' : 'estoque';
     await carregarProdutos();
+    switchTab(emUso ? 'produtos-uso' : 'produtos', document.querySelector(`[data-tab="${emUso ? 'produtos-uso' : 'produtos'}"]`));
   }
 
   async function confirmarExclusaoProduto() {
@@ -2707,8 +2808,9 @@
      MOVIMENTAÇÕES — CRUD
   ══════════════════════════════════════════════════════ */
   function preencherSelectProdutos() {
+    const produtosEstoque = App.produtos.filter(p => !p.em_uso);
     const opts = '<option value="">Selecione o produto...</option>' +
-      App.produtos.map(p => `<option value="${p.id}">${p.nome} (${p.qtd_atual} ${p.unidade})</option>`).join('');
+      produtosEstoque.map(p => `<option value="${p.id}">${p.nome} (${p.qtd_atual} ${p.unidade})</option>`).join('');
     document.getElementById('entrada-produto').innerHTML = opts;
     document.getElementById('saida-produto').innerHTML   = opts;
   }
@@ -2980,8 +3082,9 @@ async function salvarUsuario() {
   }
 
   function exportarEstoqueCSV() {
-    const h = ['Nome','Categoria','Patrimônio','Em uso','Qtd Atual','Unidade','Qtd Mínima','Validade','Status','Última Entrada','Última Saída','Cadastrado por'];
-    const r = App.produtos.map(p => [p.nome, p.categoria, p.patrimonio, p.em_uso ? 'Sim' : 'Não', p.qtd_atual, p.unidade, p.qtd_minima, fmtData(p.validade), statusProduto(p).label, fmtData(p.ultima_entrada), fmtData(p.ultima_saida), p.criado_por]);
+    const produtosEstoque = App.produtos.filter(p => !p.em_uso);
+    const h = ['Nome','Categoria','Patrimônio','Qtd Atual','Unidade','Qtd Mínima','Validade','Status','Última Entrada','Última Saída','Cadastrado por'];
+    const r = produtosEstoque.map(p => [p.nome, p.categoria, p.patrimonio, p.qtd_atual, p.unidade, p.qtd_minima, fmtData(p.validade), statusProduto(p).label, fmtData(p.ultima_entrada), fmtData(p.ultima_saida), p.criado_por]);
     downloadCSV('estoque_' + today() + '.csv', [h, ...r]);
     toast('CSV gerado!', 'success');
   }
@@ -2994,7 +3097,7 @@ async function salvarUsuario() {
   }
 
   function exportarCriticosCSV() {
-    const criticos = App.produtos.filter(p => statusProduto(p).label !== 'Normal');
+    const criticos = App.produtos.filter(p => !p.em_uso && statusProduto(p).label !== 'Normal');
     const h = ['Nome','Categoria','Qtd Atual','Qtd Mínima','Status','Última Entrada'];
     const r = criticos.map(p => [p.nome, p.categoria, p.qtd_atual, p.qtd_minima, statusProduto(p).label, fmtData(p.ultima_entrada)]);
     downloadCSV('itens_criticos_' + today() + '.csv', [h, ...r]);
@@ -3260,7 +3363,7 @@ async function salvarUsuario() {
           <span class="detalhe-label">Quantidade Atual</span>
           <span class="detalhe-valor" id="detalhe-qtd-atual"></span>
         </div>
-        <div class="detalhe-item">
+        <div class="detalhe-item" id="detalhe-qtd-minima-item">
           <span class="detalhe-label">Quantidade Mínima</span>
           <span class="detalhe-valor" id="detalhe-qtd-minima"></span>
         </div>
@@ -3272,12 +3375,12 @@ async function salvarUsuario() {
           <span class="detalhe-label">Validade</span>
           <span class="detalhe-valor" id="detalhe-validade"></span>
         </div>
-        <hr class="detalhe-divider">
-        <div class="detalhe-item">
+        <hr class="detalhe-divider" id="detalhe-mov-divider">
+        <div class="detalhe-item" id="detalhe-ultima-entrada-item">
           <span class="detalhe-label">Última Entrada</span>
           <span class="detalhe-valor" id="detalhe-ultima-entrada"></span>
         </div>
-        <div class="detalhe-item">
+        <div class="detalhe-item" id="detalhe-ultima-saida-item">
           <span class="detalhe-label">Última Saída</span>
           <span class="detalhe-valor" id="detalhe-ultima-saida"></span>
         </div>
