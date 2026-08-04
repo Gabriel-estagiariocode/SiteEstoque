@@ -143,6 +143,45 @@
     .metric-value { font-size: 26px; font-weight: 600; line-height: 1.2; margin-top: 4px; }
     .metric-sub   { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
 
+    .produto-tabs {
+      display: inline-flex;
+      gap: 4px;
+      padding: 4px;
+      margin-bottom: 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .produto-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 0;
+      border-radius: var(--radius);
+      background: transparent;
+      color: var(--text-muted);
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+      white-space: nowrap;
+    }
+    .produto-tab:hover { background: var(--surface-2); color: var(--text); }
+    .produto-tab.active { background: var(--green-bg); color: var(--green); }
+    .produto-tab-count {
+      min-width: 22px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: var(--surface-2);
+      color: var(--text-muted);
+      font-size: 11px;
+      text-align: center;
+    }
+    .produto-tab.active .produto-tab-count { background: var(--surface); color: var(--green); }
+
     .table-wrap { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
     thead th { padding: 9px 10px; text-align: left; font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; background: var(--surface-2); border-bottom: 1px solid var(--border); white-space: nowrap; }
@@ -798,8 +837,8 @@
     <section id="tab-produtos" class="tab-section">
       <div class="page-header">
         <div>
-          <div class="page-title">Produtos em estoque</div>
-          <div class="page-sub">Cadastro, quantidades e status de todos os itens</div>
+          <div class="page-title" id="produtos-page-title">Produtos em estoque</div>
+          <div class="page-sub" id="produtos-page-sub">Cadastro, quantidades e status dos itens disponíveis</div>
         </div>
         <div class="page-actions">
           <button class="theme-toggle" id="theme-toggle-app" type="button" onclick="toggleTheme()" aria-label="Alternar modo escuro">
@@ -818,6 +857,16 @@
           <select id="select-setor-produtos" onchange="mudarSetor(this.value)" style="max-width:260px">
             <option value="todos">Todos os locais</option>
           </select>
+        </div>
+        <div class="produto-tabs" role="tablist" aria-label="Visualização de produtos">
+          <button type="button" class="produto-tab active" data-produto-aba="estoque" onclick="alternarAbaProdutos('estoque')">
+            <span>Produtos (estoque)</span>
+            <span class="produto-tab-count" id="count-produtos-estoque">—</span>
+          </button>
+          <button type="button" class="produto-tab" data-produto-aba="uso" onclick="alternarAbaProdutos('uso')">
+            <span>Produtos em uso</span>
+            <span class="produto-tab-count" id="count-produtos-uso">—</span>
+          </button>
         </div>
         <div class="metrics-grid">
           <button type="button" class="metric-card" data-status-filter="" onclick="filtrarProdutosPorStatus('')"><div class="metric-label">Total de itens</div><div class="metric-value" id="metric-total">—</div><div class="metric-sub">produtos cadastrados</div></button>
@@ -1444,6 +1493,7 @@
     movimentacoes: [],
     usuarios:      [],
     setorAtivo:    null,
+    produtosAbaAtiva: 'estoque',
   };
   let inactivityIntervalId = null;
   let autoRefreshIntervalId = null;
@@ -2142,6 +2192,31 @@
     renderProdutos();
   }
 
+  function produtoEstaNaAbaAtiva(p) {
+    return App.produtosAbaAtiva === 'uso' ? Boolean(p.em_uso) : !p.em_uso;
+  }
+
+  function obterProdutosDaAbaAtiva() {
+    return App.produtos.filter(produtoEstaNaAbaAtiva);
+  }
+
+  function atualizarAbasProdutos() {
+    const totalEstoque = App.produtos.filter(p => !p.em_uso).length;
+    const totalUso = App.produtos.filter(p => p.em_uso).length;
+    const countEstoque = document.getElementById('count-produtos-estoque');
+    const countUso = document.getElementById('count-produtos-uso');
+    if (countEstoque) countEstoque.textContent = totalEstoque;
+    if (countUso) countUso.textContent = totalUso;
+    document.querySelectorAll('.produto-tab[data-produto-aba]').forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.produtoAba === App.produtosAbaAtiva);
+    });
+  }
+
+  function alternarAbaProdutos(aba) {
+    App.produtosAbaAtiva = aba === 'uso' ? 'uso' : 'estoque';
+    renderProdutos();
+  }
+
   function obterFiltrosProdutos() {
     return {
       busca: (document.getElementById('busca-produto')?.value || '').toLowerCase(),
@@ -2159,7 +2234,7 @@
 
   function obterProdutosFiltrados() {
     const filtros = obterFiltrosProdutos();
-    return App.produtos.filter(p => produtoPassaNosFiltros(p, filtros));
+    return obterProdutosDaAbaAtiva().filter(p => produtoPassaNosFiltros(p, filtros));
   }
 
   function escapeHtml(valor) {
@@ -2174,16 +2249,26 @@
   function renderProdutos() {
     const filtros = obterFiltrosProdutos();
     atualizarMetricasAtivas(filtros.status);
+    atualizarAbasProdutos();
+    const produtosDaAba = obterProdutosDaAbaAtiva();
     const lista = obterProdutosFiltrados();
+    const exibindoUso = App.produtosAbaAtiva === 'uso';
+    const pageTitle = document.getElementById('produtos-page-title');
+    const pageSub = document.getElementById('produtos-page-sub');
+    if (pageTitle) pageTitle.textContent = exibindoUso ? 'Produtos em uso' : 'Produtos em estoque';
+    if (pageSub) pageSub.textContent = exibindoUso
+      ? 'Itens alocados ou sendo utilizados'
+      : 'Cadastro, quantidades e status dos itens disponíveis';
 
-    document.getElementById('metric-total').textContent  = App.produtos.length;
-    document.getElementById('metric-normal').textContent = App.produtos.filter(p => statusProduto(p).label === 'Normal').length;
-    document.getElementById('metric-baixo').textContent  = App.produtos.filter(p => statusProduto(p).label === 'Baixo').length;
-    document.getElementById('metric-zerado').textContent = App.produtos.filter(p => statusProduto(p).label === 'Zerado').length;
+    document.getElementById('metric-total').textContent  = produtosDaAba.length;
+    document.getElementById('metric-normal').textContent = produtosDaAba.filter(p => statusProduto(p).label === 'Normal').length;
+    document.getElementById('metric-baixo').textContent  = produtosDaAba.filter(p => statusProduto(p).label === 'Baixo').length;
+    document.getElementById('metric-zerado').textContent = produtosDaAba.filter(p => statusProduto(p).label === 'Zerado').length;
 
     const tbody = document.getElementById('tbody-produtos');
     if (!lista.length) {
-      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🗃</div><p>Nenhum produto encontrado.</p></div></td></tr>`;
+      const msg = exibindoUso ? 'Nenhum produto em uso encontrado.' : 'Nenhum produto em estoque encontrado.';
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🗃</div><p>${msg}</p></div></td></tr>`;
       return;
     }
     tbody.innerHTML = lista.map(p => {
@@ -2215,7 +2300,9 @@
     }
 
     const filtros = obterFiltrosProdutos();
+    const nomeAba = App.produtosAbaAtiva === 'uso' ? 'Produtos em uso' : 'Produtos em estoque';
     const filtrosTexto = [
+      `Aba: ${nomeAba}`,
       filtros.busca ? `Busca: ${filtros.busca}` : '',
       filtros.categoria ? `Categoria: ${filtros.categoria}` : 'Todas as categorias',
       filtros.status ? `Status: ${filtros.status}` : 'Todos os status'
@@ -2268,7 +2355,7 @@
 </head>
 <body>
   <header>
-    <h1>Estoque de produtos</h1>
+    <h1>${escapeHtml(nomeAba)}</h1>
     <div class="meta">Local: ${escapeHtml(setor)}</div>
     <div class="meta">Filtros: ${escapeHtml(filtrosTexto)}</div>
     <div class="meta">Emitido por: ${escapeHtml(emitidoPor)} em ${escapeHtml(fmtData(today()))}</div>
@@ -2588,6 +2675,7 @@
 
     toast(id ? 'Produto atualizado!' : 'Produto cadastrado!', 'success');
     closeModal('modal-produto');
+    App.produtosAbaAtiva = emUso ? 'uso' : 'estoque';
     await carregarProdutos();
   }
 
