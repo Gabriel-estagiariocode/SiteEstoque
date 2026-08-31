@@ -841,6 +841,11 @@
             <option value="Baixo">Baixo</option>
             <option value="Zerado">Zerado</option>
           </select>
+          <select id="filtro-ocultos" onchange="renderProdutos()">
+            <option value="ativos">Itens ativos</option>
+            <option value="ocultos">Itens ocultados</option>
+            <option value="todos">Ativos e ocultados</option>
+          </select>
           <button type="button" class="btn" onclick="imprimirEstoque()">Imprimir estoque</button>
         </div>
         <div class="card">
@@ -884,6 +889,11 @@
             <option value="">Todas as categorias</option>
             <option>Papelaria</option><option>Limpeza</option><option>Higiene</option>
             <option>Informática</option><option>Didático</option><option>Outros</option>
+          </select>
+          <select id="filtro-ocultos-uso" onchange="renderProdutosUso()">
+            <option value="ativos">Itens ativos</option>
+            <option value="ocultos">Itens ocultados</option>
+            <option value="todos">Ativos e ocultados</option>
           </select>
           <button type="button" class="btn" onclick="imprimirProdutosUso()">Imprimir produtos em uso</button>
         </div>
@@ -1213,6 +1223,13 @@
         <div>
           <label for="prod-em-uso">Item em uso</label>
           <span>Marca produtos que estão alocados ou sendo utilizados, sem alterar o saldo do estoque.</span>
+        </div>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="prod-oculto" />
+        <div>
+          <label for="prod-oculto">Ocultar item</label>
+          <span>Remove o produto das listas principais sem apagar o histórico de movimentações.</span>
         </div>
       </div>
       <div class="form-group">
@@ -2200,15 +2217,23 @@
     return {
       busca: (document.getElementById('busca-produto')?.value || '').toLowerCase(),
       categoria: document.getElementById('filtro-categoria')?.value || '',
-      status: document.getElementById('filtro-status')?.value || ''
+      status: document.getElementById('filtro-status')?.value || '',
+      ocultos: document.getElementById('filtro-ocultos')?.value || 'ativos'
     };
+  }
+
+  function produtoPassaFiltroOculto(p, filtroOcultos) {
+    if (filtroOcultos === 'ocultos') return Boolean(p.oculto);
+    if (filtroOcultos === 'todos') return true;
+    return !p.oculto;
   }
 
   function produtoPassaNosFiltros(p, filtros) {
     const st = statusProduto(p);
     return (!filtros.busca || p.nome.toLowerCase().includes(filtros.busca) || (p.categoria||'').toLowerCase().includes(filtros.busca) || (p.patrimonio||'').toLowerCase().includes(filtros.busca))
         && (!filtros.categoria || p.categoria === filtros.categoria)
-        && (!filtros.status || st.label === filtros.status);
+        && (!filtros.status || st.label === filtros.status)
+        && produtoPassaFiltroOculto(p, filtros.ocultos);
   }
 
   function obterProdutosFiltrados() {
@@ -2219,10 +2244,12 @@
   function obterProdutosUsoFiltrados() {
     const busca = (document.getElementById('busca-produto-uso')?.value || '').toLowerCase();
     const categoria = document.getElementById('filtro-categoria-uso')?.value || '';
+    const filtroOcultos = document.getElementById('filtro-ocultos-uso')?.value || 'ativos';
     return App.produtos.filter(p => {
       return p.em_uso
         && (!busca || p.nome.toLowerCase().includes(busca) || (p.categoria||'').toLowerCase().includes(busca) || (p.patrimonio||'').toLowerCase().includes(busca) || (p.local||'').toLowerCase().includes(busca))
-        && (!categoria || p.categoria === categoria);
+        && (!categoria || p.categoria === categoria)
+        && produtoPassaFiltroOculto(p, filtroOcultos);
     });
   }
 
@@ -2238,7 +2265,7 @@
   function renderProdutos() {
     const filtros = obterFiltrosProdutos();
     atualizarMetricasAtivas(filtros.status);
-    const produtosEstoque = App.produtos.filter(p => !p.em_uso);
+    const produtosEstoque = App.produtos.filter(p => !p.em_uso && produtoPassaFiltroOculto(p, filtros.ocultos));
     const lista = obterProdutosFiltrados();
 
     document.getElementById('metric-total').textContent  = produtosEstoque.length;
@@ -2254,9 +2281,10 @@
     tbody.innerHTML = lista.map(p => {
       const st = statusProduto(p);
       const validade = statusValidade(p);
+      const ocultoBadge = p.oculto ? '<span class="badge badge-gray">Oculto</span>' : '';
       const patrimonioLinha = p.patrimonio ? `<span class="text-sm text-muted">Patrimônio: ${p.patrimonio}</span>` : '';
       return `<tr class="tr-clicavel" onclick="abrirDetalheProduto(${p.id})" title="Clique para mais detalhes">
-        <td><div class="produto-cell">${fotoProdutoThumbHtml(p)}<div class="produto-info"><div class="produto-name-row"><span class="font-semi">${p.nome}</span></div>${patrimonioLinha}</div></div></td>
+        <td><div class="produto-cell">${fotoProdutoThumbHtml(p)}<div class="produto-info"><div class="produto-name-row"><span class="font-semi">${p.nome}</span>${ocultoBadge}</div>${patrimonioLinha}</div></div></td>
         <td><span class="badge badge-gray">${p.categoria || '—'}</span></td>
         <td class="font-semi">${p.qtd_atual}</td>
         <td class="text-muted">${p.unidade || '—'}</td>
@@ -2280,8 +2308,9 @@
       return;
     }
     tbody.innerHTML = lista.map(p => {
+      const ocultoBadge = p.oculto ? '<span class="badge badge-gray">Oculto</span>' : '';
       return `<tr class="tr-clicavel" onclick="abrirDetalheProduto(${p.id})" title="Clique para mais detalhes">
-        <td><div class="produto-cell">${fotoProdutoThumbHtml(p)}<div class="produto-info"><div class="produto-name-row"><span class="font-semi">${p.nome}</span><span class="badge badge-purple">Em uso</span></div>${p.obs ? `<span class="text-sm text-muted">${p.obs}</span>` : ''}</div></div></td>
+        <td><div class="produto-cell">${fotoProdutoThumbHtml(p)}<div class="produto-info"><div class="produto-name-row"><span class="font-semi">${p.nome}</span><span class="badge badge-purple">Em uso</span>${ocultoBadge}</div>${p.obs ? `<span class="text-sm text-muted">${p.obs}</span>` : ''}</div></div></td>
         <td><span class="badge badge-gray">${p.categoria || '—'}</span></td>
         <td class="font-semi">${p.qtd_atual}</td>
         <td class="text-muted">${p.unidade || '—'}</td>
@@ -2306,7 +2335,8 @@
     const filtrosTexto = [
       filtros.busca ? `Busca: ${filtros.busca}` : '',
       filtros.categoria ? `Categoria: ${filtros.categoria}` : 'Todas as categorias',
-      filtros.status ? `Status: ${filtros.status}` : 'Todos os status'
+      filtros.status ? `Status: ${filtros.status}` : 'Todos os status',
+      filtros.ocultos === 'ocultos' ? 'Ocultados' : (filtros.ocultos === 'todos' ? 'Ativos e ocultados' : 'Itens ativos')
     ].filter(Boolean).join(' | ');
     const setor = App.setorAtivo && App.setorAtivo !== 'todos' ? padronizarNomeSetor(App.setorAtivo) : 'Todos os locais';
     const emitidoPor = App.usuario?.nome || '—';
@@ -2390,9 +2420,11 @@
 
     const busca = (document.getElementById('busca-produto-uso')?.value || '').toLowerCase();
     const categoria = document.getElementById('filtro-categoria-uso')?.value || '';
+    const filtroOcultos = document.getElementById('filtro-ocultos-uso')?.value || 'ativos';
     const filtrosTexto = [
       busca ? `Busca: ${busca}` : '',
-      categoria ? `Categoria: ${categoria}` : 'Todas as categorias'
+      categoria ? `Categoria: ${categoria}` : 'Todas as categorias',
+      filtroOcultos === 'ocultos' ? 'Ocultados' : (filtroOcultos === 'todos' ? 'Ativos e ocultados' : 'Itens ativos')
     ].filter(Boolean).join(' | ');
     const setor = App.setorAtivo && App.setorAtivo !== 'todos' ? padronizarNomeSetor(App.setorAtivo) : 'Todos os locais';
     const emitidoPor = App.usuario?.nome || '—';
@@ -2480,6 +2512,7 @@
     document.getElementById('detalhe-local').textContent       = p.local  || '—';
     document.getElementById('detalhe-patrimonio').textContent  = p.patrimonio || '—';
     document.getElementById('detalhe-em-uso').innerHTML        = p.em_uso ? '<span class="badge badge-purple">Em uso</span>' : '<span class="badge badge-gray">Disponível</span>';
+    document.getElementById('detalhe-oculto').innerHTML        = p.oculto ? '<span class="badge badge-gray">Oculto</span>' : '<span class="badge badge-green">Visível</span>';
     document.getElementById('detalhe-setor').textContent       = p.setor  || '—';
     document.getElementById('detalhe-criado-por').textContent  = p.criado_por || '—';
     document.getElementById('detalhe-obs').textContent         = p.obs || '—';
@@ -2501,7 +2534,7 @@
     const lista = App.produtos
       .filter(p => {
         const dias = diasAteValidade(p.validade);
-        return !p.em_uso && dias !== null && dias <= 30;
+        return !p.em_uso && !p.oculto && dias !== null && dias <= 30;
       })
       .sort((a, b) => diasAteValidade(a.validade) - diasAteValidade(b.validade));
 
@@ -2623,6 +2656,7 @@
     document.getElementById('prod-qtd').value       = '0';
     document.getElementById('prod-qtd-min').value   = emUsoInicial ? '0' : '5';
     document.getElementById('prod-em-uso').checked   = Boolean(emUsoInicial);
+    document.getElementById('prod-oculto').checked   = false;
     atualizarCamposProdutoUso();
     resetFotoProduto('');
     document.getElementById('modal-produto-title').textContent = emUsoInicial ? 'Novo produto em uso' : 'Novo produto';
@@ -2642,6 +2676,7 @@
     document.getElementById('prod-local').value     = p.local || '';
     document.getElementById('prod-patrimonio').value = p.patrimonio || '';
     document.getElementById('prod-em-uso').checked   = Boolean(p.em_uso);
+    document.getElementById('prod-oculto').checked   = Boolean(p.oculto);
     atualizarCamposProdutoUso();
     document.getElementById('prod-obs').value       = p.obs   || '';
     resetFotoProduto(p.foto_data_url || '');
@@ -2745,6 +2780,7 @@
     const patrimonio = document.getElementById('prod-patrimonio').value.trim();
     const emUso = document.getElementById('prod-em-uso').checked;
     const qtdMin = emUso ? 0 : (parseInt(document.getElementById('prod-qtd-min').value) || 5);
+    const oculto = document.getElementById('prod-oculto').checked;
     const obs    = document.getElementById('prod-obs').value.trim();
 
     if (!nome || !cat || !unid) { toast('Preencha os campos obrigatórios.', 'error'); return; }
@@ -2762,6 +2798,7 @@
       local: local || null,
       patrimonio: patrimonio || null,
       em_uso: emUso,
+      oculto,
       obs: obs || null,
       foto_data_url: fotoProdutoState.dataUrl || null,
       atualizado_em: new Date().toISOString()
@@ -2808,7 +2845,7 @@
      MOVIMENTAÇÕES — CRUD
   ══════════════════════════════════════════════════════ */
   function preencherSelectProdutos() {
-    const produtosEstoque = App.produtos.filter(p => !p.em_uso);
+    const produtosEstoque = App.produtos.filter(p => !p.em_uso && !p.oculto);
     const opts = '<option value="">Selecione o produto...</option>' +
       produtosEstoque.map(p => `<option value="${p.id}">${p.nome} (${p.qtd_atual} ${p.unidade})</option>`).join('');
     document.getElementById('entrada-produto').innerHTML = opts;
@@ -3082,7 +3119,7 @@ async function salvarUsuario() {
   }
 
   function exportarEstoqueCSV() {
-    const produtosEstoque = App.produtos.filter(p => !p.em_uso);
+    const produtosEstoque = App.produtos.filter(p => !p.em_uso && !p.oculto);
     const h = ['Nome','Categoria','Patrimônio','Qtd Atual','Unidade','Qtd Mínima','Validade','Status','Última Entrada','Última Saída','Cadastrado por'];
     const r = produtosEstoque.map(p => [p.nome, p.categoria, p.patrimonio, p.qtd_atual, p.unidade, p.qtd_minima, fmtData(p.validade), statusProduto(p).label, fmtData(p.ultima_entrada), fmtData(p.ultima_saida), p.criado_por]);
     downloadCSV('estoque_' + today() + '.csv', [h, ...r]);
@@ -3097,7 +3134,7 @@ async function salvarUsuario() {
   }
 
   function exportarCriticosCSV() {
-    const criticos = App.produtos.filter(p => !p.em_uso && statusProduto(p).label !== 'Normal');
+    const criticos = App.produtos.filter(p => !p.em_uso && !p.oculto && statusProduto(p).label !== 'Normal');
     const h = ['Nome','Categoria','Qtd Atual','Qtd Mínima','Status','Última Entrada'];
     const r = criticos.map(p => [p.nome, p.categoria, p.qtd_atual, p.qtd_minima, statusProduto(p).label, fmtData(p.ultima_entrada)]);
     downloadCSV('itens_criticos_' + today() + '.csv', [h, ...r]);
@@ -3396,6 +3433,10 @@ async function salvarUsuario() {
         <div class="detalhe-item">
           <span class="detalhe-label">Uso</span>
           <span class="detalhe-valor" id="detalhe-em-uso"></span>
+        </div>
+        <div class="detalhe-item">
+          <span class="detalhe-label">Visibilidade</span>
+          <span class="detalhe-valor" id="detalhe-oculto"></span>
         </div>
         <div class="detalhe-item">
           <span class="detalhe-label">Setor</span>

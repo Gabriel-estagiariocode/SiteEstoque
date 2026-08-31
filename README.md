@@ -125,3 +125,9 @@ Para habilitar o campo de patrimonio e o marcador "em uso", execute este script 
 - [sql/add-produtos-patrimonio-uso.sql](/c:/Users/User/Desktop/Projects/SiteEstoque/sql/add-produtos-patrimonio-uso.sql)
 
 O marcador "em uso" e apenas informativo: ele nao altera quantidade, status de estoque nem movimentacoes.
+
+## Produtos ocultos
+
+Para habilitar a opcao de ocultar produtos sem apagar o historico de movimentacoes, execute este script no Supabase SQL Editor:
+
+- [sql/add-produtos-oculto.sql](/c:/Users/User/Desktop/Projects/SiteEstoque/sql/add-produtos-oculto.sql)
