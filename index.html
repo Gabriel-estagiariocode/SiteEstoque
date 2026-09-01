@@ -571,11 +571,13 @@
     }
     .tooltip-info::after {
       content: attr(data-tooltip); position: absolute; right: 0; bottom: calc(100% + 8px);
-      width: max-content; max-width: 240px; padding: 8px 10px; border-radius: var(--radius);
+      width: min(240px, calc(100vw - 48px)); max-width: min(240px, calc(100vw - 48px));
+      padding: 8px 10px; border-radius: var(--radius); white-space: normal;
       background: var(--text); color: var(--surface); font-size: 11px; font-weight: 500;
       line-height: 1.4; box-shadow: var(--shadow-md); opacity: 0; pointer-events: none;
       transform: translateY(4px); transition: opacity .15s, transform .15s; z-index: 20;
     }
+    .toggle-card:first-child .tooltip-info::after { left: 0; right: auto; }
     .tooltip-info:hover::after, .tooltip-info:focus::after { opacity: 1; transform: translateY(0); }
     .detalhe-foto {
       width: 100%; max-height: 260px; object-fit: contain; border-radius: var(--radius);
@@ -868,11 +870,7 @@
             <option value="Normal">Normal</option>
             <option value="Baixo">Baixo</option>
             <option value="Zerado">Zerado</option>
-          </select>
-          <select id="filtro-ocultos" onchange="renderProdutos()">
-            <option value="ativos">Itens ativos</option>
-            <option value="ocultos">Itens ocultados</option>
-            <option value="todos">Ativos e ocultados</option>
+            <option value="Ocultados">Ocultados</option>
           </select>
           <button type="button" class="btn" onclick="imprimirEstoque()">Imprimir estoque</button>
         </div>
@@ -917,11 +915,6 @@
             <option value="">Todas as categorias</option>
             <option>Papelaria</option><option>Limpeza</option><option>Higiene</option>
             <option>Informática</option><option>Didático</option><option>Outros</option>
-          </select>
-          <select id="filtro-ocultos-uso" onchange="renderProdutosUso()">
-            <option value="ativos">Itens ativos</option>
-            <option value="ocultos">Itens ocultados</option>
-            <option value="todos">Ativos e ocultados</option>
           </select>
           <button type="button" class="btn" onclick="imprimirProdutosUso()">Imprimir produtos em uso</button>
         </div>
@@ -2245,39 +2238,30 @@
     return {
       busca: (document.getElementById('busca-produto')?.value || '').toLowerCase(),
       categoria: document.getElementById('filtro-categoria')?.value || '',
-      status: document.getElementById('filtro-status')?.value || '',
-      ocultos: document.getElementById('filtro-ocultos')?.value || 'ativos'
+      status: document.getElementById('filtro-status')?.value || ''
     };
-  }
-
-  function produtoPassaFiltroOculto(p, filtroOcultos) {
-    if (filtroOcultos === 'ocultos') return Boolean(p.oculto);
-    if (filtroOcultos === 'todos') return true;
-    return !p.oculto;
   }
 
   function produtoPassaNosFiltros(p, filtros) {
     const st = statusProduto(p);
+    const exibindoOcultados = filtros.status === 'Ocultados';
     return (!filtros.busca || p.nome.toLowerCase().includes(filtros.busca) || (p.categoria||'').toLowerCase().includes(filtros.busca) || (p.patrimonio||'').toLowerCase().includes(filtros.busca))
         && (!filtros.categoria || p.categoria === filtros.categoria)
-        && (!filtros.status || st.label === filtros.status)
-        && produtoPassaFiltroOculto(p, filtros.ocultos);
+        && (exibindoOcultados ? Boolean(p.oculto) : (!p.oculto && !p.em_uso && (!filtros.status || st.label === filtros.status)));
   }
 
   function obterProdutosFiltrados() {
     const filtros = obterFiltrosProdutos();
-    return App.produtos.filter(p => !p.em_uso && produtoPassaNosFiltros(p, filtros));
+    return App.produtos.filter(p => produtoPassaNosFiltros(p, filtros));
   }
 
   function obterProdutosUsoFiltrados() {
     const busca = (document.getElementById('busca-produto-uso')?.value || '').toLowerCase();
     const categoria = document.getElementById('filtro-categoria-uso')?.value || '';
-    const filtroOcultos = document.getElementById('filtro-ocultos-uso')?.value || 'ativos';
     return App.produtos.filter(p => {
-      return p.em_uso
+      return p.em_uso && !p.oculto
         && (!busca || p.nome.toLowerCase().includes(busca) || (p.categoria||'').toLowerCase().includes(busca) || (p.patrimonio||'').toLowerCase().includes(busca) || (p.local||'').toLowerCase().includes(busca))
-        && (!categoria || p.categoria === categoria)
-        && produtoPassaFiltroOculto(p, filtroOcultos);
+        && (!categoria || p.categoria === categoria);
     });
   }
 
@@ -2293,7 +2277,7 @@
   function renderProdutos() {
     const filtros = obterFiltrosProdutos();
     atualizarMetricasAtivas(filtros.status);
-    const produtosEstoque = App.produtos.filter(p => !p.em_uso && produtoPassaFiltroOculto(p, filtros.ocultos));
+    const produtosEstoque = App.produtos.filter(p => !p.em_uso && !p.oculto);
     const lista = obterProdutosFiltrados();
 
     document.getElementById('metric-total').textContent  = produtosEstoque.length;
@@ -2303,25 +2287,27 @@
 
     const tbody = document.getElementById('tbody-produtos');
     if (!lista.length) {
-      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🗃</div><p>Nenhum produto em estoque encontrado.</p></div></td></tr>`;
+      const msg = filtros.status === 'Ocultados' ? 'Nenhum item ocultado encontrado.' : 'Nenhum produto em estoque encontrado.';
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🗃</div><p>${msg}</p></div></td></tr>`;
       return;
     }
     tbody.innerHTML = lista.map(p => {
       const st = statusProduto(p);
       const validade = statusValidade(p);
       const ocultoBadge = p.oculto ? '<span class="badge badge-gray">Oculto</span>' : '';
+      const usoBadge = p.em_uso ? '<span class="badge badge-purple">Em uso</span>' : '';
       const patrimonioLinha = p.patrimonio ? `<span class="text-sm text-muted">Patrimônio: ${p.patrimonio}</span>` : '';
       return `<tr class="tr-clicavel" onclick="abrirDetalheProduto(${p.id})" title="Clique para mais detalhes">
-        <td><div class="produto-cell">${fotoProdutoThumbHtml(p)}<div class="produto-info"><div class="produto-name-row"><span class="font-semi">${p.nome}</span>${ocultoBadge}</div>${patrimonioLinha}</div></div></td>
+        <td><div class="produto-cell">${fotoProdutoThumbHtml(p)}<div class="produto-info"><div class="produto-name-row"><span class="font-semi">${p.nome}</span>${usoBadge}${ocultoBadge}</div>${patrimonioLinha}</div></div></td>
         <td><span class="badge badge-gray">${p.categoria || '—'}</span></td>
         <td class="font-semi">${p.qtd_atual}</td>
         <td class="text-muted">${p.unidade || '—'}</td>
         <td><span class="badge ${validade.cls}">${validade.label === 'Sem validade' ? 'Sem data' : fmtData(p.validade)}</span></td>
-        <td><span class="badge ${st.cls}">${st.label}</span></td>
+        <td>${p.em_uso ? '<span class="badge badge-purple">Em uso</span>' : `<span class="badge ${st.cls}">${st.label}</span>`}</td>
         <td class="actions-cell" onclick="event.stopPropagation()"><div class="flex gap-8">
           ${perm('editarProdutos') ? `<button class="btn btn-xs" onclick="abrirModalEditarProduto(${p.id})">Editar</button>` : ''}
           ${perm('editarProdutos') ? `<button class="btn btn-xs btn-danger" onclick="abrirModalExcluirProduto(${p.id})">Excluir</button>` : ''}
-          ${perm('registrarMov')   ? `<button class="btn btn-xs" onclick="baixaRapida(${p.id})">Baixa</button>` : ''}
+          ${perm('registrarMov') && !p.em_uso ? `<button class="btn btn-xs" onclick="baixaRapida(${p.id})">Baixa</button>` : ''}
         </div></td>
       </tr>`;
     }).join('');
@@ -2363,8 +2349,7 @@
     const filtrosTexto = [
       filtros.busca ? `Busca: ${filtros.busca}` : '',
       filtros.categoria ? `Categoria: ${filtros.categoria}` : 'Todas as categorias',
-      filtros.status ? `Status: ${filtros.status}` : 'Todos os status',
-      filtros.ocultos === 'ocultos' ? 'Ocultados' : (filtros.ocultos === 'todos' ? 'Ativos e ocultados' : 'Itens ativos')
+      filtros.status ? `Status: ${filtros.status}` : 'Todos os status'
     ].filter(Boolean).join(' | ');
     const setor = App.setorAtivo && App.setorAtivo !== 'todos' ? padronizarNomeSetor(App.setorAtivo) : 'Todos os locais';
     const emitidoPor = App.usuario?.nome || '—';
@@ -2448,11 +2433,9 @@
 
     const busca = (document.getElementById('busca-produto-uso')?.value || '').toLowerCase();
     const categoria = document.getElementById('filtro-categoria-uso')?.value || '';
-    const filtroOcultos = document.getElementById('filtro-ocultos-uso')?.value || 'ativos';
     const filtrosTexto = [
       busca ? `Busca: ${busca}` : '',
-      categoria ? `Categoria: ${categoria}` : 'Todas as categorias',
-      filtroOcultos === 'ocultos' ? 'Ocultados' : (filtroOcultos === 'todos' ? 'Ativos e ocultados' : 'Itens ativos')
+      categoria ? `Categoria: ${categoria}` : 'Todas as categorias'
     ].filter(Boolean).join(' | ');
     const setor = App.setorAtivo && App.setorAtivo !== 'todos' ? padronizarNomeSetor(App.setorAtivo) : 'Todos os locais';
     const emitidoPor = App.usuario?.nome || '—';
