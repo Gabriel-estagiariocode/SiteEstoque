@@ -543,13 +543,40 @@
       color: var(--text-muted); font-size: 12px; line-height: 1.4;
       overflow-wrap: anywhere; min-width: 0;
     }
-    .checkbox-row {
-      display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px;
-      border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-2);
+    .toggle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .toggle-card {
+      display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px;
+      padding: 11px 12px; border: 1px solid var(--border); border-radius: var(--radius-lg);
+      background: var(--surface-2); cursor: pointer; transition: border-color .15s, background .15s, box-shadow .15s;
     }
-    .checkbox-row input { margin-top: 2px; accent-color: var(--accent); }
-    .checkbox-row label { color: var(--text); font-size: 13px; font-weight: 600; }
-    .checkbox-row span { display: block; margin-top: 2px; color: var(--text-muted); font-size: 12px; line-height: 1.4; }
+    .toggle-card:hover { border-color: var(--border-dark); background: var(--surface); }
+    .toggle-card input { position: absolute; opacity: 0; pointer-events: none; }
+    .toggle-switch {
+      width: 40px; height: 22px; border-radius: 999px; padding: 2px;
+      background: var(--border-dark); transition: background .18s; flex-shrink: 0;
+    }
+    .toggle-switch::before {
+      content: ''; display: block; width: 18px; height: 18px; border-radius: 50%;
+      background: var(--surface); box-shadow: 0 2px 6px rgba(0,0,0,.18);
+      transition: transform .18s;
+    }
+    .toggle-card input:checked + .toggle-switch { background: var(--accent); }
+    .toggle-card input:checked + .toggle-switch::before { transform: translateX(18px); }
+    .toggle-card:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45,106,79,.10); }
+    .toggle-label { color: var(--text); font-size: 13px; font-weight: 600; }
+    .tooltip-info {
+      position: relative; display: inline-flex; align-items: center; justify-content: center;
+      width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--border-dark);
+      color: var(--text-muted); background: var(--surface); font-size: 12px; font-weight: 700;
+    }
+    .tooltip-info::after {
+      content: attr(data-tooltip); position: absolute; right: 0; bottom: calc(100% + 8px);
+      width: max-content; max-width: 240px; padding: 8px 10px; border-radius: var(--radius);
+      background: var(--text); color: var(--surface); font-size: 11px; font-weight: 500;
+      line-height: 1.4; box-shadow: var(--shadow-md); opacity: 0; pointer-events: none;
+      transform: translateY(4px); transition: opacity .15s, transform .15s; z-index: 20;
+    }
+    .tooltip-info:hover::after, .tooltip-info:focus::after { opacity: 1; transform: translateY(0); }
     .detalhe-foto {
       width: 100%; max-height: 260px; object-fit: contain; border-radius: var(--radius);
       border: 1px solid var(--border); background: var(--surface-2); margin-bottom: 4px;
@@ -567,6 +594,7 @@
       .info-hero { padding: 22px; }
       .foto-editor { grid-template-columns: 1fr; }
       .foto-preview, .foto-preview-placeholder { width: 100%; max-height: 220px; }
+      .toggle-grid { grid-template-columns: 1fr; }
     }
   
   /* Linha clicavel na tabela de produtos */
@@ -1218,19 +1246,19 @@
           <input type="text" id="prod-patrimonio" placeholder="Ex: PMQ - 0000" />
         </div>
       </div>
-      <div class="checkbox-row">
-        <input type="checkbox" id="prod-em-uso" onchange="atualizarCamposProdutoUso()" />
-        <div>
-          <label for="prod-em-uso">Item em uso</label>
-          <span>Marca produtos que estão alocados ou sendo utilizados, sem alterar o saldo do estoque.</span>
-        </div>
-      </div>
-      <div class="checkbox-row">
-        <input type="checkbox" id="prod-oculto" />
-        <div>
-          <label for="prod-oculto">Ocultar item</label>
-          <span>Remove o produto das listas principais sem apagar o histórico de movimentações.</span>
-        </div>
+      <div class="toggle-grid">
+        <label class="toggle-card" for="prod-em-uso">
+          <input type="checkbox" id="prod-em-uso" onchange="atualizarCamposProdutoUso()" />
+          <span class="toggle-switch" aria-hidden="true"></span>
+          <span class="toggle-label">Item em uso</span>
+          <span class="tooltip-info" tabindex="0" onclick="event.preventDefault(); event.stopPropagation()" data-tooltip="Envia o produto para a aba Produtos em uso e remove controles de estoque mínimo.">i</span>
+        </label>
+        <label class="toggle-card" for="prod-oculto">
+          <input type="checkbox" id="prod-oculto" />
+          <span class="toggle-switch" aria-hidden="true"></span>
+          <span class="toggle-label">Ocultar item</span>
+          <span class="tooltip-info" tabindex="0" onclick="event.preventDefault(); event.stopPropagation()" data-tooltip="Oculta das listas principais sem apagar o histórico de movimentações.">i</span>
+        </label>
       </div>
       <div class="form-group">
         <label class="form-label">Foto do produto</label>
@@ -2809,7 +2837,12 @@
 
     btn.disabled = false; btn.textContent = 'Salvar produto';
 
-    if (error) { toast('Erro ao salvar: ' + error.message, 'error'); return; }
+    if (error) {
+      const msg = String(error.message || '');
+      const erroColunaOculto = msg.includes("'oculto' column") || msg.includes('"oculto" column') || (msg.includes('oculto') && msg.includes('schema cache'));
+      toast(erroColunaOculto ? 'Execute o SQL sql/add-produtos-oculto.sql no Supabase e tente salvar novamente.' : 'Erro ao salvar: ' + error.message, 'error');
+      return;
+    }
 
     toast(id ? 'Produto atualizado!' : 'Produto cadastrado!', 'success');
     closeModal('modal-produto');

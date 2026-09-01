@@ -131,3 +131,5 @@ O marcador "em uso" e apenas informativo: ele nao altera quantidade, status de e
 Para habilitar a opcao de ocultar produtos sem apagar o historico de movimentacoes, execute este script no Supabase SQL Editor:
 
 - [sql/add-produtos-oculto.sql](/c:/Users/User/Desktop/Projects/SiteEstoque/sql/add-produtos-oculto.sql)
+
+Esse script tambem solicita a recarga do schema cache do Supabase/PostgREST.
