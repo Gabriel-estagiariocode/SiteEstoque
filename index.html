@@ -597,6 +597,10 @@
       .foto-editor { grid-template-columns: 1fr; }
       .foto-preview, .foto-preview-placeholder { width: 100%; max-height: 220px; }
       .toggle-grid { grid-template-columns: 1fr; }
+      /* Em telas estreitas os cards de toggle empilham em 1 coluna e o ícone
+         do primeiro card passa a ficar perto da borda direita também, então
+         a tooltip precisa abrir para a esquerda igual à do segundo card. */
+      .toggle-card:first-child .tooltip-info::after { left: auto; right: 0; }
     }
   
   /* Linha clicavel na tabela de produtos */
